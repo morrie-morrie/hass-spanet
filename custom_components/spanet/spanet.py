@@ -85,6 +85,9 @@ class SpaPool:
 
     async def set_heat_pump(self, mode: int):
         return await self.client.put("/Settings/SetHeatPumpMode/" + self.id, { "mode": mode + 1 })
+    
+    async def set_sanitise(self, mode: int):
+        return await self.client.put("/Settings/Sanitise/" + self.id, { "mode": mode + 1 })
 
     async def set_element_boost(self, on: int):
         return await self.client.put("/Settings/SetElementBoost/" + self.id, { "svElementBoost": True if on == 1 else False })

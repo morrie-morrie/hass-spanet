@@ -109,13 +109,25 @@ class Coordinator(DataUpdateCoordinator):
         logger.debug(f"SET HEAT PUMP: {mode} -> {self.state}")
         await self.async_request_refresh()
 
-    async def set_element_boost(self, value: str):
+async def set_sanitiser(self, mode: str):
+        modeIndex = SK_SANITISE.index(mode)
+        if modeIndex < 0:
+            logger.error(f"Unknown sanitiser: {mode}")
+            return
+
+        await self.spa.set_sanisiser(modeIndex)
+        self.state[SK_SANITISE] = mode
+        logger.debug(f"SET Sanitiser: {mode} -> {self.state}")
+        await self.async_request_refresh()
+
+
+async def set_element_boost(self, value: str):
         await self.spa.set_element_boost(1 if value == "on" else 0)
         self.state[SK_ELEMENT_BOOST] = value
         logger.debug(f"SET ELEMENT BOOST: {value} -> {self.state}")
         await self.async_request_refresh()
 
-    async def _async_update_data(self):
+async def _async_update_data(self):
         """Fetch data from API endpoint.
 
         This is the place to pre-process the data to lookup tables
@@ -131,11 +143,11 @@ class Coordinator(DataUpdateCoordinator):
             logger.error(f"API Error: {exc}")
             raise UpdateFailed("Failed updating spanet") from exc
 
-    async def refresh_state(self):
+async def refresh_state(self):
         await self.scheduler.tick()
         logger.debug(f"Spa {self.spa_id} Status: {self.state}")
 
-    async def update_dashboard(self):
+async def update_dashboard(self):
         dashboard_data = await self.spa.get_dashboard()
         logger.debug(f"Update Dashboard {dashboard_data}")
 
@@ -158,7 +170,7 @@ class Coordinator(DataUpdateCoordinator):
             for task in self.tasks:
                 task.trigger()
 
-    async def update_pumps(self):
+async def update_pumps(self):
         pump_data = await self.spa.get_pumps()
         logger.debug(f"Update Pumps {pump_data}")
 
@@ -176,7 +188,7 @@ class Coordinator(DataUpdateCoordinator):
 
         self.state[SK_PUMPS] = pumps
 
-    async def update_information(self):
+async def update_information(self):
         information_data = await self.spa.get_information()
         logger.debug(f"Update Information {information_data}")
 
@@ -192,10 +204,8 @@ class Coordinator(DataUpdateCoordinator):
         element_boost = information_data["information"]["settingsSummary"]["hpElementBoost"]
         self.state[SK_ELEMENT_BOOST] = "on" if element_boost == "1" else "off"
 
-    def fuzzyFind(self, modes, mode):
+def fuzzyFind(self, modes, mode):
         for m in modes:
             if m.lower().startswith(mode.lower()):
                 return m
         return None
-
-
