@@ -9,7 +9,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
@@ -52,16 +52,12 @@ async def async_setup_entry(
                 "Date/Time",
                 SK_DATE_TIME,
                 entity_category=EntityCategory.DIAGNOSTIC,
-                device_suffix="system",
-                device_name=f"{coordinator.spa_name} System",
             ),
             SpaTextSensor(
                 coordinator,
                 "Support Mode",
                 SK_SUPPORT_MODE,
                 entity_category=EntityCategory.DIAGNOSTIC,
-                device_suffix="system",
-                device_name=f"{coordinator.spa_name} System",
             ),
         ]
 
@@ -75,21 +71,8 @@ async def async_setup_entry(
 class SpaSensor(SpaEntity):
     """A sensor"""
 
-    def __init__(
-        self,
-        coordinator,
-        name,
-        status_id,
-        device_suffix: str | None = None,
-        device_name: str | None = None,
-    ) -> None:
-        super().__init__(
-            coordinator,
-            "sensor",
-            name,
-            device_suffix=device_suffix,
-            device_name=device_name,
-        )
+    def __init__(self, coordinator, name, status_id) -> None:
+        super().__init__(coordinator, "sensor", name)
         self.hass = coordinator.hass
         self._status_id = status_id
 
@@ -136,21 +119,8 @@ class SpaTextSensor(SpaSensor, SensorEntity):
         name,
         status_id,
         entity_category: EntityCategory | None = None,
-        device_suffix: str | None = None,
-        device_name: str | None = None,
     ) -> None:
-        super().__init__(
-            coordinator,
-            name,
-            status_id,
-            device_suffix=device_suffix,
-            device_name=device_name,
-        )
-        if device_suffix or device_name:
-            self._attr_device_info = DeviceInfo(
-                identifiers={(DOMAIN, f"{coordinator.spa_id}_{device_suffix}")},
-                name=device_name,
-            )
+        super().__init__(coordinator, name, status_id)
         self._attr_entity_category = entity_category
 
     @property

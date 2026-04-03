@@ -76,8 +76,6 @@ async def async_setup_entry(
                     f"{SK_BLOWER}.state",
                     blower_options,
                     coordinator.set_blower,
-                    device_suffix="controls",
-                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -90,8 +88,6 @@ async def async_setup_entry(
                         f"{SK_PUMPS}.{k}.state",
                         pump_options,
                         partial(coordinator.set_pump, k),
-                        device_suffix="controls",
-                        device_name=f"{coordinator.spa_name} Controls",
                     )
                 )
 
@@ -110,16 +106,8 @@ class SpaSelect(SpaEntity, SelectEntity):
         options,
         setter,
         entity_category: EntityCategory | None = None,
-        device_suffix: str | None = None,
-        device_name: str | None = None,
     ) -> None:
-        super().__init__(
-            coordinator,
-            "select",
-            name,
-            device_suffix=device_suffix,
-            device_name=device_name,
-        )
+        super().__init__(coordinator, "select", name)
         self.hass = coordinator.hass
         self._state_key = state_key
         self._options = options

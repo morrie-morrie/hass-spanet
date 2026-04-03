@@ -38,8 +38,6 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
-                    device_suffix="lights",
-                    device_name=f"{coordinator.spa_name} Lights",
                 ),
                 SpaNumber(
                     coordinator,
@@ -49,8 +47,6 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
-                    device_suffix="lights",
-                    device_name=f"{coordinator.spa_name} Lights",
                 ),
                 SpaNumber(
                     coordinator,
@@ -98,8 +94,6 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
-                    device_suffix="controls",
-                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -121,16 +115,8 @@ class SpaNumber(SpaEntity, NumberEntity):
         step: float,
         native_unit: str | None = None,
         entity_category: EntityCategory | None = None,
-        device_suffix: str | None = None,
-        device_name: str | None = None,
     ):
-        super().__init__(
-            coordinator,
-            "number",
-            name,
-            device_suffix=device_suffix,
-            device_name=device_name,
-        )
+        super().__init__(coordinator, "number", name)
         self._state_key = state_key
         self._setter = setter
         self._attr_native_min_value = minimum

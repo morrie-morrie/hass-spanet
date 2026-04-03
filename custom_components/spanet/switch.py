@@ -40,8 +40,6 @@ async def async_setup_entry(
                         f"Pump {k}",
                         f"{SK_PUMPS}.{k}.state",
                         partial(coordinator.set_pump, k),
-                        device_suffix="controls",
-                        device_name=f"{coordinator.spa_name} Controls",
                     )
                 )
 
@@ -51,8 +49,6 @@ async def async_setup_entry(
                 "Lights",
                 f"{SK_LIGHTS}.state",
                 coordinator.set_lights,
-                device_suffix="lights",
-                device_name=f"{coordinator.spa_name} Lights",
             )
         )
 
@@ -63,8 +59,6 @@ async def async_setup_entry(
                     "Blower",
                     f"{SK_BLOWER}.state",
                     coordinator.set_blower,
-                    device_suffix="controls",
-                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -87,8 +81,6 @@ async def async_setup_entry(
                     SK_LOCK_MODE,
                     coordinator.set_lock_mode_switch,
                     entity_category=EntityCategory.CONFIG,
-                    device_suffix="system",
-                    device_name=f"{coordinator.spa_name} System",
                 )
             )
 
@@ -123,14 +115,8 @@ class SpaSwitch(SpaEntity, SwitchEntity):
 
     _attr_device_class = SwitchDeviceClass.SWITCH
 
-    def __init__(self, coordinator, name, state_key, switch_callback, availability_key: str | None = None, entity_category: EntityCategory | None = None, device_suffix: str | None = None, device_name: str | None = None) -> None:
-        super().__init__(
-            coordinator,
-            "switch",
-            name,
-            device_suffix=device_suffix,
-            device_name=device_name,
-        )
+    def __init__(self, coordinator, name, state_key, switch_callback, availability_key: str | None = None, entity_category: EntityCategory | None = None) -> None:
+        super().__init__(coordinator, "switch", name)
         self.hass = coordinator.hass
         self._state_key = state_key
         self._switch_callback = switch_callback
