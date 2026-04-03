@@ -124,3 +124,19 @@ def extract_time_string(value: Any) -> str | None:
         return None
 
     return f"{hour:02d}:{minute:02d}"
+
+
+def normalize_light_mode(value: Any) -> str | None:
+    """Normalize light mode labels from API payloads."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    lowered = text.lower()
+    for option in LIGHT_ANIMATION_OPTIONS:
+        if lowered == option.lower():
+            return option
+    if lowered == "single":
+        return "Single"
+    return text

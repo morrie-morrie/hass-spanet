@@ -10,6 +10,7 @@ from .api_mappings import (
     PUMP_SELECT_OPTIONS,
     extract_time_string,
     heat_pump_from_api,
+    normalize_light_mode,
     operation_mode_from_api,
     power_save_from_api,
 )
@@ -450,6 +451,8 @@ class Coordinator(DataUpdateCoordinator):
 
         pumps = self.state.get(SK_PUMPS, {})
         for p in details.get("pumps", []):
+            if bool(p.get("isCirc")) or int(p.get("pumpNumber", 0)) < 1:
+                continue
             pump_id = str(p["pumpNumber"])
             if pump_id not in pumps:
                 pumps[pump_id] = {}
@@ -471,7 +474,9 @@ class Coordinator(DataUpdateCoordinator):
         blower_data = details.get("blower") or {}
         if blower_data:
             raw_state = str(blower_data.get("blowerStatus", "off")).lower()
-            speed = int(blower_data.get("speed", 1) or 1)
+            speed = int(
+                blower_data.get("blowerVariableSpeed", blower_data.get("speed", 1)) or 1
+            )
             if raw_state in {"auto", "ramp"}:
                 mapped_state = "ramp"
             elif raw_state in {"on", "variable", "low", "high"}:
@@ -502,12 +507,13 @@ class Coordinator(DataUpdateCoordinator):
         light_details = await self.spa.get_light_details()
         brightness = light_details.get("brightness", light_details.get("lightBrightness", 0))
         speed = light_details.get("speed", light_details.get("lightSpeed", 0))
+        mode = normalize_light_mode(light_details.get("mode", light_details.get("lightMode")))
         self.state[SK_LIGHTS] = {
             "apiId": light_details.get("lightId"),
             "state": "on" if light_details.get("lightOn") else "off",
             "brightness": max(1, min(5, int(brightness or 1))),
             "speed": max(1, min(5, int(speed or 1))),
-            "mode": light_details.get("mode", light_details.get("lightMode")),
+            "mode": mode,
             "colour": light_details.get("colour", light_details.get("lightColour")),
         }
         mode = str(self.state[SK_LIGHTS].get("mode") or "")
