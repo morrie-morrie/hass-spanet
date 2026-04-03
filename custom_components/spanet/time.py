@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SK_SLEEP_TIMERS
+from .const import DOMAIN, SK_SANITISE_TIME, SK_SLEEP_TIMERS
 from .entity import SpaEntity
 
 
@@ -22,6 +22,14 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+        entities.append(
+            SpaConfigTime(
+                coordinator,
+                "Sanitise Time",
+                SK_SANITISE_TIME,
+                coordinator.set_sanitise_time,
+            )
+        )
         for key, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
             entities.append(
                 SpaSleepTimerTime(
@@ -63,6 +71,33 @@ class SpaSleepTimerTime(SpaEntity, TimeEntity):
             return None
         try:
             hour, minute = value.split(":")[0:2]
+            return time(hour=int(hour), minute=int(minute))
+        except (ValueError, TypeError):
+            return None
+
+    async def async_set_value(self, value: time) -> None:
+        await self._setter(f"{value.hour:02d}:{value.minute:02d}")
+
+
+class SpaConfigTime(SpaEntity, TimeEntity):
+    """Spa generic time setting."""
+
+    def __init__(self, coordinator, name: str, state_key: str, setter):
+        super().__init__(coordinator, "time", name)
+        self._state_key = state_key
+        self._setter = setter
+        self._attr_entity_category = EntityCategory.CONFIG
+
+    @property
+    def native_value(self) -> time | None:
+        try:
+            value = self.coordinator.get_state(self._state_key)
+        except Exception:
+            return None
+        if not value:
+            return None
+        try:
+            hour, minute = str(value).split(":")[0:2]
             return time(hour=int(hour), minute=int(minute))
         except (ValueError, TypeError):
             return None

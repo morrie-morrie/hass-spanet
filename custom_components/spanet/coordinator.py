@@ -23,7 +23,6 @@ from .const import (
     SK_LIGHT_PROFILE,
     SK_LOCK_MODE,
     SK_OPERATION_MODE,
-    SK_OXY,
     SK_POWER_SAVE,
     SK_PUMPS,
     SK_SANITISE,
@@ -149,7 +148,6 @@ class Coordinator(DataUpdateCoordinator):
         if profile == "Single":
             await self.set_light_mode("Single")
             self.state[SK_LIGHT_PROFILE] = "Single"
-            self.state[SK_LIGHT_ANIMATION] = "None"
             return
 
         current_animation = self.state.get(SK_LIGHT_ANIMATION)
@@ -302,6 +300,11 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_SANITISE_TIME] = value
         await self.async_request_refresh()
 
+    async def set_date_time(self, value: str):
+        await self.spa.set_date_time(value)
+        self.state[SK_DATE_TIME] = value
+        await self.async_request_refresh()
+
     async def set_element_boost(self, value: str):
         if not self.state.get(SK_ELEMENT_BOOST_SUPPORTED, False):
             logger.warning("Element Boost not supported for spa %s", self.spa_id)
@@ -315,12 +318,6 @@ class Coordinator(DataUpdateCoordinator):
             return
 
         self.state[SK_ELEMENT_BOOST] = "on" if on else "off"
-        await self.async_request_refresh()
-
-    async def set_oxy(self, value: str):
-        on = value == "on"
-        await self.spa.set_oxy(on)
-        self.state[SK_OXY] = "on" if on else "off"
         await self.async_request_refresh()
 
     async def set_blower(self, value: str):
@@ -350,11 +347,6 @@ class Coordinator(DataUpdateCoordinator):
         current_runtime = int(self.state.get(SK_FILTRATION_RUNTIME, 0))
         self.state[SK_FILTRATION_CYCLE] = value
         await self.spa.set_filtration(total_runtime=current_runtime, in_between_cycles=value)
-        await self.async_request_refresh()
-
-    async def set_lock_mode(self, value: int):
-        self.state[SK_LOCK_MODE] = value
-        await self.spa.set_lock_mode(value)
         await self.async_request_refresh()
 
     async def set_lock_mode_switch(self, value: str):
@@ -434,10 +426,6 @@ class Coordinator(DataUpdateCoordinator):
                 "speed": max(1, min(5, speed)),
             }
 
-        oxy = details.get("oxy")
-        if oxy is not None:
-            self.state[SK_OXY] = "on" if bool(oxy) else "off"
-
     async def update_information(self):
         information_data = await self.spa.get_information()
         settings_summary = information_data.get("information", {}).get("settingsSummary", {})
@@ -505,7 +493,7 @@ class Coordinator(DataUpdateCoordinator):
             self.state[SK_LIGHT_ANIMATION] = mode
         else:
             self.state[SK_LIGHT_PROFILE] = "Single"
-            self.state[SK_LIGHT_ANIMATION] = "None"
+            self.state[SK_LIGHT_ANIMATION] = "Fade"
 
     async def update_settings(self):
         filtration = await self.spa.get_filtration()

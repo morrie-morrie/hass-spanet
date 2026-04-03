@@ -108,12 +108,6 @@ class SpaPool:
             },
         )
 
-    async def set_oxy(self, on: bool):
-        return await self.client.put(
-            f"/PumpsAndBlower/SetOxy/{self.id}",
-            {"oxy": bool(on)},
-        )
-
     async def get_operation_mode(self):
         return await self.client.get(f"/Settings/OperationMode/{self.id}")
 

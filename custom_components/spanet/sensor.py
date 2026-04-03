@@ -15,11 +15,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    SK_DATE_TIME,
     SK_HEATER,
     SK_PUMPS,
     SK_SANITISE,
-    SK_SANITISE_TIME,
     SK_SETTEMP,
     SK_SLEEPING,
     SK_SUPPORT_MODE,
@@ -41,18 +39,6 @@ async def async_setup_entry(
             SpaBinarySensor(coordinator, "Heater", SK_HEATER),
             SpaBinarySensor(coordinator, "Sanitise", SK_SANITISE),
             SpaBinarySensor(coordinator, "Sleeping", SK_SLEEPING),
-            SpaTextSensor(
-                coordinator,
-                "Sanitise Time",
-                SK_SANITISE_TIME,
-                entity_category=EntityCategory.CONFIG,
-            ),
-            SpaTextSensor(
-                coordinator,
-                "Date/Time",
-                SK_DATE_TIME,
-                entity_category=EntityCategory.DIAGNOSTIC,
-            ),
             SpaTextSensor(
                 coordinator,
                 "Support Mode",

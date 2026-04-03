@@ -64,8 +64,9 @@ async def async_setup_entry(
                 coordinator,
                 "Light Animation",
                 SK_LIGHT_ANIMATION,
-                ["Fade", "Step", "Party", "None"],
+                ["Fade", "Step", "Party"],
                 coordinator.set_light_animation,
+                availability_callback=lambda c: c.state.get(SK_LIGHT_PROFILE) == "Animated",
             )
         )
 
@@ -155,6 +156,7 @@ class SpaSelect(SpaEntity, SelectEntity):
         options,
         setter,
         entity_category: EntityCategory | None = None,
+        availability_callback=None,
     ) -> None:
         super().__init__(coordinator, "select", name)
         self.hass = coordinator.hass
@@ -162,6 +164,13 @@ class SpaSelect(SpaEntity, SelectEntity):
         self._options = options
         self._setter = setter
         self._attr_entity_category = entity_category
+        self._availability_callback = availability_callback
+
+    @property
+    def available(self) -> bool:
+        if self._availability_callback is None:
+            return True
+        return bool(self._availability_callback(self.coordinator))
 
     @property
     def current_option(self):
