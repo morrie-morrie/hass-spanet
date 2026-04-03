@@ -263,13 +263,13 @@ class SpaPool:
     async def set_light_brightness(self, light_id: int, brightness: int):
         return await self.client.put(
             f"/Lights/SetLightBrightness/{int(light_id)}",
-            {"deviceId": int(self.id), "brightness": int(brightness)},
+            {"deviceId": int(self.id), "brightness": max(1, min(5, int(brightness)))},
         )
 
     async def set_light_speed(self, light_id: int, speed: int):
         return await self.client.put(
             f"/Lights/SetLightSpeed/{int(light_id)}",
-            {"deviceId": int(self.id), "speed": int(speed)},
+            {"deviceId": int(self.id), "speed": max(1, min(5, int(speed)))},
         )
 
     async def get_filtration(self):

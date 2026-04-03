@@ -123,6 +123,30 @@ async def test_set_light_mode_payload():
 
 
 @pytest.mark.asyncio
+async def test_set_light_speed_payload_clamped_to_supported_range():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_light_speed(7, 99)
+
+    _, path, payload = client.calls[-1]
+    assert path == "/Lights/SetLightSpeed/7"
+    assert payload == {"deviceId": 99, "speed": 5}
+
+
+@pytest.mark.asyncio
+async def test_set_light_brightness_payload_clamped_to_supported_range():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_light_brightness(7, 0)
+
+    _, path, payload = client.calls[-1]
+    assert path == "/Lights/SetLightBrightness/7"
+    assert payload == {"deviceId": 99, "brightness": 1}
+
+
+@pytest.mark.asyncio
 async def test_http_client_raises_for_unexpected_json_shape():
     session = FakeSession()
     client = HttpClient(session)

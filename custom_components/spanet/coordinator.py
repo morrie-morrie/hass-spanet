@@ -125,14 +125,16 @@ class Coordinator(DataUpdateCoordinator):
 
     async def set_light_brightness(self, value: int):
         lights = self.get_state(SK_LIGHTS)
-        lights["brightness"] = value
-        await self.spa.set_light_brightness(lights["apiId"], value)
+        mapped_value = max(1, min(5, int(value)))
+        lights["brightness"] = mapped_value
+        await self.spa.set_light_brightness(lights["apiId"], mapped_value)
         await self.async_request_refresh()
 
     async def set_light_speed(self, value: int):
         lights = self.get_state(SK_LIGHTS)
-        lights["speed"] = value
-        await self.spa.set_light_speed(lights["apiId"], value)
+        mapped_value = max(1, min(5, int(value)))
+        lights["speed"] = mapped_value
+        await self.spa.set_light_speed(lights["apiId"], mapped_value)
         await self.async_request_refresh()
 
     async def set_light_mode(self, mode: str):
@@ -492,8 +494,8 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_LIGHTS] = {
             "apiId": light_details.get("lightId"),
             "state": "on" if light_details.get("lightOn") else "off",
-            "brightness": int(brightness or 0),
-            "speed": int(speed or 0),
+            "brightness": max(1, min(5, int(brightness or 1))),
+            "speed": max(1, min(5, int(speed or 1))),
             "mode": light_details.get("mode", light_details.get("lightMode")),
             "colour": light_details.get("colour", light_details.get("lightColour")),
         }

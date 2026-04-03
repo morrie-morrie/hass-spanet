@@ -61,7 +61,10 @@ async def async_setup_entry(
             ),
         ]
 
-        for k, v in coordinator.get_state(SK_PUMPS).items():
+        for k, v in sorted(
+            coordinator.get_state(SK_PUMPS).items(),
+            key=lambda item: (0, f"{int(item[0]):04d}") if str(item[0]).isdigit() else (1, str(item[0])),
+        ):
             if not v["hasSwitch"]:
                 entities.append(SpaBinarySensor(coordinator, f"Pump {k}", f"pumps.{k}.state"))
 

@@ -30,9 +30,14 @@ from .entity import SpaEntity
 
 
 def _pump_display_name(pump_key: str) -> str:
-    if str(pump_key) == "1":
-        return "Pump A"
     return f"Pump {pump_key}"
+
+
+def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
+    key = str(item[0])
+    if key.isdigit():
+        return (0, f"{int(key):04d}")
+    return (1, key)
 
 
 async def async_setup_entry(
@@ -108,7 +113,7 @@ async def async_setup_entry(
                 )
             )
 
-        for k, v in coordinator.get_state(SK_PUMPS).items():
+        for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
             if v["hasSwitch"]:
                 options = pump_options_default.copy()
                 if v.get("auto", False):

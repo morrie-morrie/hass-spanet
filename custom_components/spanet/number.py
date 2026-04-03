@@ -14,6 +14,8 @@ from .const import (
     SK_BLOWER,
     SK_FILTRATION_CYCLE,
     SK_FILTRATION_RUNTIME,
+    SK_LIGHT_ANIMATION,
+    SK_LIGHT_PROFILE,
     SK_LIGHTS,
     SK_TIMEOUT,
 )
@@ -47,6 +49,8 @@ async def async_setup_entry(
                     minimum=1,
                     maximum=5,
                     step=1,
+                    availability_callback=lambda c: c.state.get(SK_LIGHT_PROFILE) == "Animated"
+                    and c.state.get(SK_LIGHT_ANIMATION) != "None",
                 ),
                 SpaNumber(
                     coordinator,
@@ -119,6 +123,7 @@ class SpaNumber(SpaEntity, NumberEntity):
         native_unit: str | None = None,
         entity_category: EntityCategory | None = None,
         mode: NumberMode | None = None,
+        availability_callback=None,
     ):
         super().__init__(coordinator, "number", name)
         self._state_key = state_key
@@ -129,6 +134,13 @@ class SpaNumber(SpaEntity, NumberEntity):
         self._attr_native_unit_of_measurement = native_unit
         self._attr_entity_category = entity_category
         self._attr_mode = mode or NumberMode.SLIDER
+        self._availability_callback = availability_callback
+
+    @property
+    def available(self) -> bool:
+        if self._availability_callback is None:
+            return True
+        return bool(self._availability_callback(self.coordinator))
 
     @property
     def native_value(self):
