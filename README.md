@@ -2,13 +2,16 @@
 
 # hass-spanet - supports new SpaNET v2 protocol
 
+Fork note: This repository is a maintained fork of the original `lloydw/hass-spanet` project by `@lloydw`.
+Credit and thanks to the original author for building and open-sourcing the integration.
+
 <img src="https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.spanet.total" align="right">
 Control your SpaNET Spa with Home Assistant
 
 <br/>
 <br/>
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=lloydw&repository=hass-spanet&category=Integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morrie-morrie&repository=hass-spanet&category=Integration)
 
 ### Current Progress
 
