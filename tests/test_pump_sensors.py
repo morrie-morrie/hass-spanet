@@ -15,11 +15,18 @@ def _install_homeassistant_stubs():
     components = sys.modules.setdefault(
         "homeassistant.components", types.ModuleType("homeassistant.components")
     )
-    components_button = sys.modules.setdefault(
-        "homeassistant.components.button", types.ModuleType("homeassistant.components.button")
+    components_sensor = sys.modules.setdefault(
+        "homeassistant.components.sensor", types.ModuleType("homeassistant.components.sensor")
+    )
+    components_binary_sensor = sys.modules.setdefault(
+        "homeassistant.components.binary_sensor",
+        types.ModuleType("homeassistant.components.binary_sensor"),
     )
     config_entries = sys.modules.setdefault(
         "homeassistant.config_entries", types.ModuleType("homeassistant.config_entries")
+    )
+    const_module = sys.modules.setdefault(
+        "homeassistant.const", types.ModuleType("homeassistant.const")
     )
     core = sys.modules.setdefault("homeassistant.core", types.ModuleType("homeassistant.core"))
     helpers = sys.modules.setdefault(
@@ -37,8 +44,17 @@ def _install_homeassistant_stubs():
         types.ModuleType("homeassistant.helpers.update_coordinator"),
     )
 
-    class ButtonEntity:
+    class BinarySensorEntity:
         pass
+
+    class BinarySensorDeviceClass:
+        RUNNING = "running"
+
+    class SensorEntity:
+        pass
+
+    class SensorDeviceClass:
+        TEMPERATURE = "temperature"
 
     class ConfigEntry:
         def __init__(self, entry_id="entry-1", options=None):
@@ -61,34 +77,18 @@ def _install_homeassistant_stubs():
         def __init__(self, coordinator):
             self.coordinator = coordinator
 
-    components_button.ButtonEntity = ButtonEntity
+    components_binary_sensor.BinarySensorEntity = BinarySensorEntity
+    components_binary_sensor.BinarySensorDeviceClass = BinarySensorDeviceClass
+    components_sensor.SensorEntity = SensorEntity
+    components_sensor.SensorDeviceClass = SensorDeviceClass
     config_entries.ConfigEntry = ConfigEntry
+    const_module.UnitOfTemperature = SimpleNamespace(CELSIUS="C")
     core.HomeAssistant = HomeAssistant
     helpers_entity.DeviceInfo = DeviceInfo
     helpers_entity.EntityCategory = EntityCategory
     helpers_entity_platform.AddEntitiesCallback = object
     helpers_update_coordinator.CoordinatorEntity = CoordinatorEntity
     components.__path__ = getattr(components, "__path__", [])
-    helpers.__path__ = getattr(helpers, "__path__", [])
-
-    if "async_timeout" not in sys.modules:
-        async_timeout = types.ModuleType("async_timeout")
-
-        class _Timeout:
-            def __init__(self, _seconds):
-                self._seconds = _seconds
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, exc_type, exc, tb):
-                return False
-
-        def timeout(seconds):
-            return _Timeout(seconds)
-
-        async_timeout.timeout = timeout
-        sys.modules["async_timeout"] = async_timeout
 
 
 def _ensure_package():
@@ -115,59 +115,53 @@ def _load(module_name: str, filename: str):
 
 const = _load("custom_components.spanet.const", "const.py")
 _load("custom_components.spanet.entity", "entity.py")
-button_module = _load("custom_components.spanet.button", "button.py")
-coordinator_module = _load("custom_components.spanet.coordinator", "coordinator.py")
+binary_sensor_module = _load("custom_components.spanet.binary_sensor", "binary_sensor.py")
+
+
+class _Coordinator:
+    def __init__(self, state):
+        self.hass = SimpleNamespace()
+        self.spa_name = "Morison Spa"
+        self.spa_id = "1"
+        self.state = state
+
+    def get_state(self, key, sub_key=None):
+        obj = self.state
+        path = key.split(".")
+        if sub_key is not None:
+            path.append(sub_key)
+        for p in path:
+            obj = obj[p]
+        return obj
 
 
 @pytest.mark.asyncio
-async def test_sanitise_button_created_when_status_available():
-    class _Coordinator:
-        def __init__(self):
-            self.hass = SimpleNamespace()
-            self.spa_name = "My Spa"
-            self.spa_id = "1"
-            self.state = {const.SK_SANITISE_STATUS: "off"}
-            self.called = 0
-
-        async def trigger_sanitise(self):
-            self.called += 1
-
-    coordinator = _Coordinator()
+async def test_pump_binary_sensors_created_for_switch_pumps():
+    coordinator = _Coordinator(
+        {
+            const.SK_WATERTEMP: 325,
+            const.SK_SETTEMP: 330,
+            const.SK_HEATER: 0,
+            const.SK_SANITISE: 0,
+            const.SK_SLEEPING: 0,
+            const.SK_SUPPORT_MODE: "off",
+            const.SK_PUMPS: {
+                "1": {"hasSwitch": True, "state": "auto"},
+                "2": {"hasSwitch": True, "state": "off"},
+            },
+        }
+    )
     hass = SimpleNamespace(data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}})
     config_entry = SimpleNamespace(entry_id="entry-1", options={})
 
     created = []
-    await button_module.async_setup_entry(hass, config_entry, created.extend)
+    await binary_sensor_module.async_setup_entry(hass, config_entry, created.extend)
 
-    button = next(entity for entity in created if entity._attr_name == "Run Sanitise")
-    await button.async_press()
-    assert coordinator.called == 1
+    pump_entities = [entity for entity in created if entity._attr_name.startswith("Pump")]
+    assert [entity._attr_name for entity in pump_entities] == ["Pump 1", "Pump 2"]
+    assert all(entity.entity_id.startswith("binary_sensor.") for entity in pump_entities)
 
-
-@pytest.mark.asyncio
-async def test_sanitise_off_request_is_ignored():
-    coordinator = coordinator_module.Coordinator(
-        hass=SimpleNamespace(),
-        spanet=None,
-        spa_config={"id": "1", "name": "Spa"},
-        config_entry=SimpleNamespace(options={}),
-    )
-
-    class _Spa:
-        def __init__(self):
-            self.calls = 0
-
-        async def set_sanitise_status(self, _on):
-            self.calls += 1
-
-        async def get_sanitise_status(self):
-            return False
-
-    spa = _Spa()
-    coordinator.spa = spa
-    coordinator.state = {const.SK_SANITISE_STATUS: "off"}
-
-    await coordinator.set_sanitiser("off")
-
-    assert spa.calls == 0
-    assert coordinator.state[const.SK_SANITISE_STATUS] == "off"
+    pump_1 = next(entity for entity in pump_entities if entity._attr_name == "Pump 1")
+    pump_2 = next(entity for entity in pump_entities if entity._attr_name == "Pump 2")
+    assert pump_1.is_on is False
+    assert pump_2.is_on is False

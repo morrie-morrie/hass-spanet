@@ -1,10 +1,6 @@
-"""SpaNet Sensors"""
+"""SpaNET sensors."""
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
-    BinarySensorDeviceClass,
-)
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
@@ -15,11 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    SK_HEATER,
-    SK_PUMPS,
-    SK_SANITISE,
     SK_SETTEMP,
-    SK_SLEEPING,
     SK_SUPPORT_MODE,
     SK_WATERTEMP,
 )
@@ -28,7 +20,7 @@ from .entity import SpaEntity
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entity: AddEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,
 ) -> bool:
     entities = []
 
@@ -36,9 +28,6 @@ async def async_setup_entry(
         entities += [
             SpaTemperatureSensor(coordinator, "Water Temperature", SK_WATERTEMP),
             SpaTemperatureSensor(coordinator, "Set Temperature", SK_SETTEMP),
-            SpaBinarySensor(coordinator, "Heater", SK_HEATER),
-            SpaBinarySensor(coordinator, "Sanitise", SK_SANITISE),
-            SpaBinarySensor(coordinator, "Sleeping", SK_SLEEPING),
             SpaTextSensor(
                 coordinator,
                 "Support Mode",
@@ -47,14 +36,7 @@ async def async_setup_entry(
             ),
         ]
 
-        for k, v in sorted(
-            coordinator.get_state(SK_PUMPS).items(),
-            key=lambda item: (0, f"{int(item[0]):04d}") if str(item[0]).isdigit() else (1, str(item[0])),
-        ):
-            if not v["hasSwitch"]:
-                entities.append(SpaBinarySensor(coordinator, f"Pump {k}", f"pumps.{k}.state"))
-
-    async_add_entity(entities)
+    async_add_entities(entities)
 
 
 class SpaSensor(SpaEntity):
@@ -78,25 +60,6 @@ class SpaTemperatureSensor(SpaSensor, SensorEntity):
         if value is None:
             return None
         return int(value) / 10
-
-
-class SpaBinarySensor(SpaSensor, BinarySensorEntity):
-    """A binary sensor"""
-
-    _attr_device_class = BinarySensorDeviceClass.RUNNING
-
-    @property
-    def is_on(self):
-        value = self.coordinator.get_state(self._status_id)
-        if value is None:
-            return None
-        if value == "on":
-            return True
-        if value == "off":
-            return False
-        if value == "auto":
-            return False
-        return int(value) == 1
 
 
 class SpaTextSensor(SpaSensor, SensorEntity):

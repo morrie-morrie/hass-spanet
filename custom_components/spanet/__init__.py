@@ -7,16 +7,18 @@ import uuid
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .const import DEVICE_ID, DOMAIN
+from .const import DEVICE_ID, DOMAIN, RETIRED_ENTITY_UNIQUE_IDS
 from .coordinator import Coordinator
 from .services import async_register_services, async_unregister_services
-from .spanet import SpaNet
+from .spanet import SpaNet, SpaNetAuthFailed
 
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.CLIMATE,
     Platform.SWITCH,
@@ -44,11 +46,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await async_register_services(hass)
         return True
 
-    await spanet.authenticate(
-        config_entry.data["email"],
-        config_entry.data["password"],
-        domain_data[DEVICE_ID],
-    )
+    try:
+        await spanet.authenticate(
+            config_entry.data["email"],
+            config_entry.data["password"],
+            domain_data[DEVICE_ID],
+        )
+    except SpaNetAuthFailed as exc:
+        raise ConfigEntryAuthFailed("SpaNET authentication failed") from exc
 
     for spa in spanet.get_available_spas():
         coordinator = Coordinator(hass, spanet, spa, config_entry)
@@ -99,36 +104,22 @@ async def _async_reenable_entities(hass: HomeAssistant, config_entry: ConfigEntr
 async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     """Remove stale SpaNET entities for platforms no longer exposed by the integration."""
     registry = er.async_get(hass)
-    removed_name_suffixes_by_type = {
-        "select.": {"LightProfile", "LightAnimation", "BlowerMode", "Pump1", "Pump2"},
-        "number.": {"LightBrightness", "LightSpeed", "BlowerSpeed"},
-        "switch.": {"SanitiseStatus", "LockMode"},
-    }
     for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
         if entry.platform != DOMAIN:
             continue
         unique_id = str(entry.unique_id or "")
-        entity_id = str(entry.entity_id or "")
-        if entry.entity_id.startswith("datetime.") or unique_id.startswith("datetime."):
+        if unique_id in RETIRED_ENTITY_UNIQUE_IDS:
             registry.async_remove(entry.entity_id)
             continue
-        for prefix, suffixes in removed_name_suffixes_by_type.items():
-            if unique_id.startswith(prefix) and any(unique_id.endswith(f"_{suffix}") for suffix in suffixes):
-                registry.async_remove(entry.entity_id)
-                break
-        else:
-            if any(
-                fragment in entity_id
-                for fragment in (
-                    "_lightprofile",
-                    "_lightanimation",
-                    "_lightbrightness",
-                    "_lightspeed",
-                    "_blowermode",
-                    "_blowerspeed",
-                    "_sanitisestatus",
-                    "_lockmode",
-                )
-            ):
-                registry.async_remove(entry.entity_id)
-            continue
+        if _is_retired_sensor_binary_entry(entry):
+            registry.async_remove(entry.entity_id)
+
+
+def _is_retired_sensor_binary_entry(entry: er.RegistryEntry) -> bool:
+    """Return True for legacy binary sensors that were incorrectly created on the sensor platform."""
+    if entry.domain != Platform.SENSOR:
+        return False
+    original_name = str(getattr(entry, "original_name", "") or getattr(entry, "name", "") or "")
+    if original_name in {"Heater", "Sanitise", "Sleeping"}:
+        return True
+    return original_name.startswith("Pump ")

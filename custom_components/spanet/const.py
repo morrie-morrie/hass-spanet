@@ -36,6 +36,22 @@ SANITISER = ["Off", "On"]
 
 OPT_ENABLE_HEAT_PUMP = "enable_heat_pump"
 
+ACCOUNT_UNIQUE_ID_PREFIX = "spanet-account:"
+
+RETIRED_ENTITY_UNIQUE_IDS = {
+    "datetime.DateTime",
+    "select.LightProfile",
+    "select.LightAnimation",
+    "select.BlowerMode",
+    "select.Pump1",
+    "select.Pump2",
+    "number.LightBrightness",
+    "number.LightSpeed",
+    "number.BlowerSpeed",
+    "switch.SanitiseStatus",
+    "switch.LockMode",
+}
+
 SLEEP_TIMER_DAY_PROFILES = {
     "Every Day": "7F",
     "Week Days": "1F",
