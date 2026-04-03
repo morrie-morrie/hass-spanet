@@ -24,6 +24,8 @@ SK_LOCK_MODE = "lockMode"
 SK_TIMEOUT = "timeout"
 SK_SANITISE_TIME = "sanitiseTime"
 SK_SANITISE_STATUS = "sanitiseStatus"
+SK_DATE_TIME = "dateTime"
+SK_SUPPORT_MODE = "supportMode"
 
 SL_HEATING = "Heating"
 SL_SLEEPING = "Sleeping"

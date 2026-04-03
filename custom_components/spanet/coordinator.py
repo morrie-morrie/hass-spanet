@@ -10,6 +10,7 @@ from .const import (
     OPT_ENABLE_HEAT_PUMP,
     POWER_SAVE,
     SK_BLOWER,
+    SK_DATE_TIME,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_FILTRATION_CYCLE,
@@ -28,6 +29,7 @@ from .const import (
     SK_SETTEMP,
     SK_SLEEP_TIMERS,
     SK_SLEEPING,
+    SK_SUPPORT_MODE,
     SK_TIMEOUT,
     SK_WATERTEMP,
     SL_HEATING,
@@ -273,6 +275,12 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_lock_mode(value)
         await self.async_request_refresh()
 
+    async def set_lock_mode_switch(self, value: str):
+        mode = 1 if value == "on" else 0
+        self.state[SK_LOCK_MODE] = mode
+        await self.spa.set_lock_mode(mode)
+        await self.async_request_refresh()
+
     async def set_timeout(self, value: int):
         self.state[SK_TIMEOUT] = value
         await self.spa.set_timeout(value)
@@ -421,6 +429,9 @@ class Coordinator(DataUpdateCoordinator):
 
         sanitise_status = await self.spa.get_sanitise_status()
         self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
+
+        self.state[SK_DATE_TIME] = await self.spa.get_date_time()
+        self.state[SK_SUPPORT_MODE] = await self.spa.get_support_mode()
 
         try:
             power_save = await self.spa.get_power_save()

@@ -268,6 +268,15 @@ class SpaPool:
     async def set_timeout(self, timeout: int):
         return await self.client.put(f"/Settings/Timeout/{self.id}", {"timeout": int(timeout)})
 
+    async def get_date_time(self):
+        return await self.client.get(f"/Settings/DateTime/{self.id}")
+
+    async def set_date_time(self, value: str):
+        return await self.client.put(f"/Settings/DateTime/{self.id}", {"dateTime": value})
+
+    async def get_support_mode(self):
+        return await self.client.get(f"/Settings/SupportMode/{self.id}")
+
 
 class SpaNet:
     def __init__(self, aio_session):

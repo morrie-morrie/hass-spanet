@@ -7,7 +7,14 @@ from .const import DOMAIN
 
 
 class SpaEntity(CoordinatorEntity):
-    def __init__(self, coordinator, entity_type, name) -> None:
+    def __init__(
+        self,
+        coordinator,
+        entity_type,
+        name,
+        device_suffix: str | None = None,
+        device_name: str | None = None,
+    ) -> None:
         super().__init__(coordinator)
         self.hass = coordinator.hass
 
@@ -17,8 +24,14 @@ class SpaEntity(CoordinatorEntity):
         )
         self._attr_name = f"{coordinator.spa_name} {name}"
 
+        device_id = self.coordinator.spa_id
+        identifiers = {(DOMAIN, device_id)}
+        if device_suffix:
+            identifiers = {(DOMAIN, f"{device_id}_{device_suffix}")}
+
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.spa_id)},
+            identifiers=identifiers,
+            name=device_name,
         )
 
     def _build_entity_id(self, name):

@@ -7,6 +7,7 @@ from functools import partial
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -41,6 +42,7 @@ async def async_setup_entry(
                 SK_OPERATION_MODE,
                 OPERATION_MODES[1:],
                 coordinator.set_operation_mode,
+                entity_category=EntityCategory.CONFIG,
             )
         )
         entities.append(
@@ -50,12 +52,20 @@ async def async_setup_entry(
                 SK_POWER_SAVE,
                 POWER_SAVE[1:],
                 coordinator.set_power_save,
+                entity_category=EntityCategory.CONFIG,
             )
         )
 
         if config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
             entities.append(
-                SpaSelect(coordinator, "Heat Pump", SK_HEAT_PUMP, HEAT_PUMP, coordinator.set_heat_pump)
+                SpaSelect(
+                    coordinator,
+                    "Heat Pump",
+                    SK_HEAT_PUMP,
+                    HEAT_PUMP,
+                    coordinator.set_heat_pump,
+                    entity_category=EntityCategory.CONFIG,
+                )
             )
 
         if SK_BLOWER in coordinator.state:
@@ -66,6 +76,8 @@ async def async_setup_entry(
                     f"{SK_BLOWER}.state",
                     blower_options,
                     coordinator.set_blower,
+                    device_suffix="controls",
+                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -78,6 +90,8 @@ async def async_setup_entry(
                         f"{SK_PUMPS}.{k}.state",
                         pump_options,
                         partial(coordinator.set_pump, k),
+                        device_suffix="controls",
+                        device_name=f"{coordinator.spa_name} Controls",
                     )
                 )
 
@@ -88,12 +102,29 @@ async def async_setup_entry(
 class SpaSelect(SpaEntity, SelectEntity):
     """A selector."""
 
-    def __init__(self, coordinator, name, state_key, options, setter) -> None:
-        super().__init__(coordinator, "select", name)
+    def __init__(
+        self,
+        coordinator,
+        name,
+        state_key,
+        options,
+        setter,
+        entity_category: EntityCategory | None = None,
+        device_suffix: str | None = None,
+        device_name: str | None = None,
+    ) -> None:
+        super().__init__(
+            coordinator,
+            "select",
+            name,
+            device_suffix=device_suffix,
+            device_name=device_name,
+        )
         self.hass = coordinator.hass
         self._state_key = state_key
         self._options = options
         self._setter = setter
+        self._attr_entity_category = entity_category
 
     @property
     def current_option(self):

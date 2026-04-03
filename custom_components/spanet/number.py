@@ -6,6 +6,7 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -14,6 +15,7 @@ from .const import (
     SK_FILTRATION_CYCLE,
     SK_FILTRATION_RUNTIME,
     SK_LIGHTS,
+    SK_TIMEOUT,
 )
 from .entity import SpaEntity
 
@@ -36,6 +38,8 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
+                    device_suffix="lights",
+                    device_name=f"{coordinator.spa_name} Lights",
                 ),
                 SpaNumber(
                     coordinator,
@@ -45,6 +49,8 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
+                    device_suffix="lights",
+                    device_name=f"{coordinator.spa_name} Lights",
                 ),
                 SpaNumber(
                     coordinator,
@@ -55,6 +61,7 @@ async def async_setup_entry(
                     maximum=1440,
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
+                    entity_category=EntityCategory.CONFIG,
                 ),
                 SpaNumber(
                     coordinator,
@@ -65,6 +72,18 @@ async def async_setup_entry(
                     maximum=1440,
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
+                    entity_category=EntityCategory.CONFIG,
+                ),
+                SpaNumber(
+                    coordinator,
+                    "Timeout",
+                    SK_TIMEOUT,
+                    coordinator.set_timeout,
+                    minimum=0,
+                    maximum=240,
+                    step=1,
+                    native_unit=UnitOfTime.MINUTES,
+                    entity_category=EntityCategory.CONFIG,
                 ),
             ]
         )
@@ -79,6 +98,8 @@ async def async_setup_entry(
                     minimum=0,
                     maximum=100,
                     step=1,
+                    device_suffix="controls",
+                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -99,14 +120,24 @@ class SpaNumber(SpaEntity, NumberEntity):
         maximum: float,
         step: float,
         native_unit: str | None = None,
+        entity_category: EntityCategory | None = None,
+        device_suffix: str | None = None,
+        device_name: str | None = None,
     ):
-        super().__init__(coordinator, "number", name)
+        super().__init__(
+            coordinator,
+            "number",
+            name,
+            device_suffix=device_suffix,
+            device_name=device_name,
+        )
         self._state_key = state_key
         self._setter = setter
         self._attr_native_min_value = minimum
         self._attr_native_max_value = maximum
         self._attr_native_step = step
         self._attr_native_unit_of_measurement = native_unit
+        self._attr_entity_category = entity_category
 
     @property
     def native_value(self):

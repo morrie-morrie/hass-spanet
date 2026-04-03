@@ -7,6 +7,7 @@ from functools import partial
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -15,6 +16,7 @@ from .const import (
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_LIGHTS,
+    SK_LOCK_MODE,
     SK_PUMPS,
     SK_SANITISE_STATUS,
     SK_SLEEP_TIMERS,
@@ -38,10 +40,21 @@ async def async_setup_entry(
                         f"Pump {k}",
                         f"{SK_PUMPS}.{k}.state",
                         partial(coordinator.set_pump, k),
+                        device_suffix="controls",
+                        device_name=f"{coordinator.spa_name} Controls",
                     )
                 )
 
-        entities.append(SpaSwitch(coordinator, "Lights", f"{SK_LIGHTS}.state", coordinator.set_lights))
+        entities.append(
+            SpaSwitch(
+                coordinator,
+                "Lights",
+                f"{SK_LIGHTS}.state",
+                coordinator.set_lights,
+                device_suffix="lights",
+                device_name=f"{coordinator.spa_name} Lights",
+            )
+        )
 
         if SK_BLOWER in coordinator.state:
             entities.append(
@@ -50,6 +63,8 @@ async def async_setup_entry(
                     "Blower",
                     f"{SK_BLOWER}.state",
                     coordinator.set_blower,
+                    device_suffix="controls",
+                    device_name=f"{coordinator.spa_name} Controls",
                 )
             )
 
@@ -60,6 +75,20 @@ async def async_setup_entry(
                     "Sanitise Status",
                     SK_SANITISE_STATUS,
                     coordinator.set_sanitiser,
+                    entity_category=EntityCategory.CONFIG,
+                )
+            )
+
+        if SK_LOCK_MODE in coordinator.state:
+            entities.append(
+                SpaSwitch(
+                    coordinator,
+                    "Lock Mode",
+                    SK_LOCK_MODE,
+                    coordinator.set_lock_mode_switch,
+                    entity_category=EntityCategory.CONFIG,
+                    device_suffix="system",
+                    device_name=f"{coordinator.spa_name} System",
                 )
             )
 
@@ -70,6 +99,7 @@ async def async_setup_entry(
                     f"Sleep Timer {k}",
                     f"{SK_SLEEP_TIMERS}.{k}.state",
                     partial(coordinator.set_sleep_timer, k),
+                    entity_category=EntityCategory.CONFIG,
                 )
             )
 
@@ -80,6 +110,7 @@ async def async_setup_entry(
                 SK_ELEMENT_BOOST,
                 coordinator.set_element_boost,
                 availability_key=SK_ELEMENT_BOOST_SUPPORTED,
+                entity_category=EntityCategory.CONFIG,
             )
         )
 
@@ -92,14 +123,19 @@ class SpaSwitch(SpaEntity, SwitchEntity):
 
     _attr_device_class = SwitchDeviceClass.SWITCH
 
-    def __init__(
-        self, coordinator, name, state_key, switch_callback, availability_key: str | None = None
-    ) -> None:
-        super().__init__(coordinator, "switch", name)
+    def __init__(self, coordinator, name, state_key, switch_callback, availability_key: str | None = None, entity_category: EntityCategory | None = None, device_suffix: str | None = None, device_name: str | None = None) -> None:
+        super().__init__(
+            coordinator,
+            "switch",
+            name,
+            device_suffix=device_suffix,
+            device_name=device_name,
+        )
         self.hass = coordinator.hass
         self._state_key = state_key
         self._switch_callback = switch_callback
         self._availability_key = availability_key
+        self._attr_entity_category = entity_category
 
     @property
     def available(self) -> bool:

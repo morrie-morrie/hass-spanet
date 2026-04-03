@@ -43,6 +43,10 @@ def _install_homeassistant_stubs():
         def __init__(self, **kwargs):
             self.kwargs = kwargs
 
+    class EntityCategory:
+        CONFIG = "config"
+        DIAGNOSTIC = "diagnostic"
+
     class CoordinatorEntity:
         def __init__(self, coordinator):
             self.coordinator = coordinator
@@ -68,6 +72,7 @@ def _install_homeassistant_stubs():
     config_entries.ConfigEntry = ConfigEntry
     core.HomeAssistant = HomeAssistant
     helpers_entity.DeviceInfo = DeviceInfo
+    helpers_entity.EntityCategory = EntityCategory
     helpers_entity_platform.AddEntitiesCallback = object
     helpers_update_coordinator.CoordinatorEntity = CoordinatorEntity
     helpers_update_coordinator.DataUpdateCoordinator = DataUpdateCoordinator
