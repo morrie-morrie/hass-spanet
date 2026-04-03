@@ -63,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         entry_data["coordinators"].append(coordinator)
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await _async_cleanup_removed_entities(hass, config_entry)
     await _async_reenable_entities(hass, config_entry)
     await async_register_services(hass)
     return True
@@ -92,3 +93,13 @@ async def _async_reenable_entities(hass: HomeAssistant, config_entry: ConfigEntr
             er.RegistryEntryDisabler.INTEGRATION,
         }:
             registry.async_update_entity(entry.entity_id, disabled_by=None)
+
+
+async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Remove stale SpaNET entities for platforms no longer exposed by the integration."""
+    registry = er.async_get(hass)
+    for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+        if entry.platform != DOMAIN:
+            continue
+        if entry.entity_id.startswith("datetime.") or str(entry.unique_id).startswith("datetime."):
+            registry.async_remove(entry.entity_id)
