@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+import re
 
 OPERATION_MODE_LABELS_BY_API = {
     1: "Normal",
@@ -108,13 +109,13 @@ def extract_time_string(value: Any) -> str | None:
     if " " in text:
         text = text.split(" ", 1)[0]
 
-    pieces = text.split(":")
-    if len(pieces) < 2:
+    match = re.search(r"(?P<hour>\d{1,2}):(?P<minute>\d{2})", text)
+    if match is None:
         return None
 
     try:
-        hour = int(pieces[0])
-        minute = int(pieces[1])
+        hour = int(match.group("hour"))
+        minute = int(match.group("minute"))
     except (TypeError, ValueError):
         return None
 

@@ -194,6 +194,7 @@ class Coordinator(DataUpdateCoordinator):
     async def set_sleep_timer(self, key: str, value: str):
         timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
         timer["state"] = value
+        timer["isEnabled"] = value == "on"
         await self.spa.set_sleep_timer_enabled(timer["apiId"], value == "on")
         await self.async_request_refresh()
 
@@ -473,23 +474,6 @@ class Coordinator(DataUpdateCoordinator):
         elif SK_ELEMENT_BOOST not in self.state:
             self.state[SK_ELEMENT_BOOST] = None
 
-        timers = {}
-        for t in settings_summary.get("sleepTimers", []):
-            timer_id = str(t["timerNumber"])
-            timers[timer_id] = {
-                "id": t.get("id"),
-                "number": t.get("timerNumber"),
-                "apiId": t.get("id"),
-                "name": t.get("timerName"),
-                "startTime": extract_time_string(t.get("startTime")),
-                "endTime": extract_time_string(t.get("endTime")),
-                "daysHex": t.get("daysHex"),
-                "dayProfile": self._timer_day_profile_from_hex(str(t.get("daysHex", ""))),
-                "isEnabled": bool(t.get("isEnabled")),
-                "state": "on" if t.get("isEnabled") else "off",
-            }
-        self.state[SK_SLEEP_TIMERS] = timers
-
     async def update_lights(self):
         light_details = await self.spa.get_light_details()
         brightness = light_details.get("brightness", light_details.get("lightBrightness", 0))
@@ -533,6 +517,30 @@ class Coordinator(DataUpdateCoordinator):
 
         self.state[SK_DATE_TIME] = await self.spa.get_date_time()
         self.state[SK_SUPPORT_MODE] = await self.spa.get_support_mode()
+
+        try:
+            sleep_timers = await self.spa.get_sleep_timer()
+        except Exception:
+            sleep_timers = []
+
+        timers = {}
+        for t in sleep_timers:
+            timer_id = str(t.get("timerNumber"))
+            if not timer_id:
+                continue
+            timers[timer_id] = {
+                "id": t.get("id"),
+                "number": t.get("timerNumber"),
+                "apiId": t.get("id"),
+                "name": t.get("timerName"),
+                "startTime": extract_time_string(t.get("startTime")),
+                "endTime": extract_time_string(t.get("endTime")),
+                "daysHex": t.get("daysHex"),
+                "dayProfile": self._timer_day_profile_from_hex(str(t.get("daysHex", ""))),
+                "isEnabled": bool(t.get("isEnabled")),
+                "state": "on" if t.get("isEnabled") else "off",
+            }
+        self.state[SK_SLEEP_TIMERS] = timers
 
         try:
             power_save = await self.spa.get_power_save()

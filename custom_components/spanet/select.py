@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -17,12 +19,19 @@ from .const import (
     DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
     SLEEP_TIMER_DAY_PROFILES,
+    SK_FILTRATION_CYCLE,
+    SK_FILTRATION_RUNTIME,
     SK_HEAT_PUMP,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
     SK_SLEEP_TIMERS,
+    SK_TIMEOUT,
 )
 from .entity import SpaEntity
+
+FILTRATION_CYCLE_OPTIONS = [str(value) for value in range(1, 25)]
+FILTRATION_RUNTIME_OPTIONS = [str(value) for value in (1, 2, 3, 4, 6, 8, 12, 24)]
+TIMEOUT_OPTIONS = [str(value) for value in range(1, 61)]
 
 
 async def async_setup_entry(
@@ -50,6 +59,36 @@ async def async_setup_entry(
                 SK_POWER_SAVE,
                 POWER_SAVE_OPTIONS,
                 coordinator.set_power_save,
+                entity_category=EntityCategory.CONFIG,
+            )
+        )
+        entities.append(
+            SpaNumericSelect(
+                coordinator,
+                "Filtration Cycle Gap",
+                SK_FILTRATION_CYCLE,
+                FILTRATION_CYCLE_OPTIONS,
+                coordinator.set_filtration_cycle,
+                entity_category=EntityCategory.CONFIG,
+            )
+        )
+        entities.append(
+            SpaNumericSelect(
+                coordinator,
+                "Filtration Runtime",
+                SK_FILTRATION_RUNTIME,
+                FILTRATION_RUNTIME_OPTIONS,
+                coordinator.set_filtration_runtime,
+                entity_category=EntityCategory.CONFIG,
+            )
+        )
+        entities.append(
+            SpaNumericSelect(
+                coordinator,
+                "Timeout",
+                SK_TIMEOUT,
+                TIMEOUT_OPTIONS,
+                coordinator.set_timeout,
                 entity_category=EntityCategory.CONFIG,
             )
         )
@@ -119,3 +158,17 @@ class SpaSelect(SpaEntity, SelectEntity):
 
     async def async_select_option(self, option):
         await self._setter(option)
+
+
+class SpaNumericSelect(SpaSelect):
+    """Select entity backed by an integer coordinator state."""
+
+    @property
+    def current_option(self):
+        value = self.coordinator.get_state(self._state_key)
+        if value is None:
+            return None
+        return str(int(value))
+
+    async def async_select_option(self, option):
+        await self._setter(int(option))

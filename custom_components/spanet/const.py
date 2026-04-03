@@ -48,6 +48,9 @@ RETIRED_ENTITY_UNIQUE_IDS = {
     "number.LightBrightness",
     "number.LightSpeed",
     "number.BlowerSpeed",
+    "number.FiltrationRuntime",
+    "number.FiltrationCycleGap",
+    "number.Timeout",
     "switch.SanitiseStatus",
     "switch.LockMode",
 }
