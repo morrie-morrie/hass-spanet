@@ -43,7 +43,7 @@ async def async_setup_entry(
 
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
-            if v["hasSwitch"] and v["speeds"] == 1:
+            if v.get("hasSwitch", False) and not v.get("auto", False):
                 entities.append(
                     SpaSwitch(
                         coordinator,

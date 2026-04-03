@@ -101,6 +101,8 @@ async def async_setup_entry(
                     minimum=1,
                     maximum=5,
                     step=1,
+                    availability_callback=lambda c: c.state.get(SK_BLOWER, {}).get("state")
+                    == "variable",
                 )
             )
 

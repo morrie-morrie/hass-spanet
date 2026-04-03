@@ -48,7 +48,6 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
-    pump_options_default = ["off", "on"]
     blower_options = ["off", "ramp", "variable"]
     entities = []
 
@@ -118,19 +117,17 @@ async def async_setup_entry(
             )
 
         for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
-            if v["hasSwitch"]:
-                options = pump_options_default.copy()
-                if v.get("auto", False):
-                    options = ["off", "auto", "on"]
-                entities.append(
-                    SpaSelect(
-                        coordinator,
-                        _pump_display_name(k),
-                        f"{SK_PUMPS}.{k}.state",
-                        options,
-                        partial(coordinator.set_pump, k),
-                    )
+            if not v.get("hasSwitch", False) or not v.get("auto", False):
+                continue
+            entities.append(
+                SpaSelect(
+                    coordinator,
+                    _pump_display_name(k),
+                    f"{SK_PUMPS}.{k}.state",
+                    ["off", "auto", "on"],
+                    partial(coordinator.set_pump, k),
                 )
+            )
 
         for k, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
             entities.append(
