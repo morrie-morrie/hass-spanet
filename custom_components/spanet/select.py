@@ -10,12 +10,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .api_mappings import (
+    HEAT_PUMP_OPTIONS,
+    LIGHT_ANIMATION_OPTIONS,
+    OPERATION_MODE_OPTIONS,
+    POWER_SAVE_OPTIONS,
+)
 from .const import (
     DOMAIN,
-    HEAT_PUMP,
-    OPERATION_MODES,
     OPT_ENABLE_HEAT_PUMP,
-    POWER_SAVE,
     SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_HEAT_PUMP,
@@ -64,7 +67,7 @@ async def async_setup_entry(
                 coordinator,
                 "Light Animation",
                 SK_LIGHT_ANIMATION,
-                ["Fade", "Step", "Party"],
+                LIGHT_ANIMATION_OPTIONS,
                 coordinator.set_light_animation,
                 availability_callback=lambda c: c.state.get(SK_LIGHT_PROFILE) == "Animated",
             )
@@ -75,7 +78,7 @@ async def async_setup_entry(
                 coordinator,
                 "Operation Mode",
                 SK_OPERATION_MODE,
-                OPERATION_MODES[1:],
+                OPERATION_MODE_OPTIONS,
                 coordinator.set_operation_mode,
                 entity_category=EntityCategory.CONFIG,
             )
@@ -85,7 +88,7 @@ async def async_setup_entry(
                 coordinator,
                 "Power Save",
                 SK_POWER_SAVE,
-                POWER_SAVE[1:],
+                POWER_SAVE_OPTIONS,
                 coordinator.set_power_save,
                 entity_category=EntityCategory.CONFIG,
             )
@@ -97,7 +100,7 @@ async def async_setup_entry(
                     coordinator,
                     "Heat Pump",
                     SK_HEAT_PUMP,
-                    HEAT_PUMP,
+                    HEAT_PUMP_OPTIONS,
                     coordinator.set_heat_pump,
                     entity_category=EntityCategory.CONFIG,
                 )

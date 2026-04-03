@@ -6,6 +6,19 @@ import time
 
 import jwt
 
+try:
+    from .api_mappings import (
+        BLOWER_STATE_TO_API,
+        HEAT_PUMP_API_BY_LABEL,
+        PUMP_STATE_TO_API,
+    )
+except ImportError:
+    from api_mappings import (  # type: ignore
+        BLOWER_STATE_TO_API,
+        HEAT_PUMP_API_BY_LABEL,
+        PUMP_STATE_TO_API,
+    )
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://app.spanet.net.au/api"
@@ -66,11 +79,8 @@ class SpaPool:
 
     async def set_pump(self, pump_id: str, state: str):
         state = str(state).lower()
-        mode_map = {"on": 1, "off": 2, "auto": 3, "low": 1, "high": 1}
-        speed_map = {"on": 0, "off": 0, "auto": 0, "low": 1, "high": 2}
-
-        mode_id = mode_map.get(state)
-        if mode_id is None:
+        payload = PUMP_STATE_TO_API.get(state)
+        if payload is None:
             logger.warning("Unknown modeId for pump state %s", state)
             return None
 
@@ -78,24 +88,15 @@ class SpaPool:
             f"/PumpsAndBlower/SetPump/{pump_id}",
             {
                 "deviceId": int(self.id),
-                "modeId": mode_id,
-                "pumpVariableSpeed": speed_map.get(state, 0),
+                "modeId": payload["modeId"],
+                "pumpVariableSpeed": payload["pumpVariableSpeed"],
             },
         )
 
     async def set_blower(self, blower_id: str, state: str, speed: int):
         state = str(state).lower()
-        mode_map = {
-            "on": 1,
-            "off": 2,
-            "auto": 3,
-            "low": 1,
-            "high": 1,
-            "ramp": 3,
-            "variable": 1,
-        }
-        mode_id = mode_map.get(state)
-        if mode_id is None:
+        payload = BLOWER_STATE_TO_API.get(state)
+        if payload is None:
             logger.warning("Unknown blower state %s", state)
             return None
 
@@ -103,7 +104,7 @@ class SpaPool:
             f"/PumpsAndBlower/SetBlower/{blower_id}",
             {
                 "deviceId": int(self.id),
-                "modeId": mode_id,
+                "modeId": payload["modeId"],
                 "speed": max(1, min(5, int(speed))),
             },
         )
@@ -192,10 +193,11 @@ class SpaPool:
     async def get_heat_pump(self):
         return await self.client.get(f"/Settings/HeatPumpMode/{self.id}")
 
-    async def set_heat_pump(self, mode: int):
+    async def set_heat_pump(self, mode: str):
+        api_mode = HEAT_PUMP_API_BY_LABEL[mode]
         return await self.client.put(
             f"/Settings/SetHeatPumpMode/{self.id}",
-            {"mode": mode + 1, "svElementBoost": False},
+            {"mode": api_mode, "svElementBoost": False},
         )
 
     async def set_element_boost(self, on: bool):

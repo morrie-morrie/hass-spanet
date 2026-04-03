@@ -9,6 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .const import DEVICE_ID, DOMAIN
 from .coordinator import Coordinator
@@ -63,6 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         entry_data["coordinators"].append(coordinator)
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await _async_reenable_entities(hass, config_entry)
     await async_register_services(hass)
     return True
 
@@ -78,3 +80,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not has_entries:
             await async_unregister_services(hass)
     return unload_ok
+
+
+async def _async_reenable_entities(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Re-enable SpaNET entities disabled by prior device/integration defaults."""
+    registry = er.async_get(hass)
+    for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+        if entry.platform != DOMAIN:
+            continue
+        if entry.disabled_by in {
+            er.RegistryEntryDisabler.DEVICE,
+            er.RegistryEntryDisabler.INTEGRATION,
+        }:
+            registry.async_update_entity(entry.entity_id, disabled_by=None)

@@ -262,7 +262,7 @@ async def test_element_boost_unsupported_short_circuits():
 
 @pytest.mark.asyncio
 async def test_element_boost_api_error_does_not_crash_or_update_state():
-    err_cls = sys.modules["custom_components.spanet.spanet"].SpaNetApiError
+    err_cls = coordinator_module.SpaNetApiError
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),
         spanet=None,
@@ -375,3 +375,103 @@ async def test_set_light_profile_animated_defaults_to_fade_when_missing_animatio
     assert calls == ["Fade"]
     assert coordinator.state[const.SK_LIGHT_PROFILE] == "Animated"
     assert coordinator.state[const.SK_LIGHT_ANIMATION] == "Fade"
+
+
+@pytest.mark.asyncio
+async def test_update_pumps_keeps_runtime_capability_driven_entities():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.state = {}
+
+    async def _get_pumps():
+        return {
+            "pumpAndBlower": {
+                "pumps": [
+                    {
+                        "id": 11,
+                        "pumpNumber": 1,
+                        "hasAuto": True,
+                        "pumpSpeed": 2,
+                        "canSwitchOn": True,
+                        "pumpStatus": "auto",
+                    },
+                    {
+                        "id": 12,
+                        "pumpNumber": 2,
+                        "hasAuto": False,
+                        "pumpSpeed": 1,
+                        "canSwitchOn": True,
+                        "pumpStatus": "off",
+                    },
+                ],
+                "blower": {
+                    "id": 13,
+                    "blowerStatus": "auto",
+                    "speed": 4,
+                },
+            }
+        }
+
+    coordinator.spa = SimpleNamespace(get_pumps=_get_pumps)
+    await coordinator.update_pumps()
+
+    assert coordinator.state[const.SK_PUMPS]["1"]["auto"] is True
+    assert coordinator.state[const.SK_PUMPS]["1"]["hasSwitch"] is True
+    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "auto"
+    assert coordinator.state[const.SK_PUMPS]["2"]["state"] == "off"
+    assert coordinator.state[const.SK_BLOWER]["state"] == "ramp"
+    assert coordinator.state[const.SK_BLOWER]["speed"] == 4
+
+
+@pytest.mark.asyncio
+async def test_update_settings_prefers_authoritative_api_mode_endpoints():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={"enable_heat_pump": True}),
+    )
+    coordinator.state = {}
+
+    coordinator.spa = SimpleNamespace(
+        get_filtration=lambda: {"totalRuntime": 3, "inBetweenCycles": 12},
+        get_lock_mode=lambda: 1,
+        get_timeout=lambda: 30,
+        get_sanitise_time=lambda: "08:30",
+        get_sanitise_status=lambda: True,
+        get_date_time=lambda: "2026-04-03 14:30:00",
+        get_support_mode=lambda: "off",
+        get_power_save=lambda: {"mode": 2},
+        get_operation_mode=lambda: 3,
+        get_heat_pump=lambda: {"mode": 4},
+    )
+
+    async def _awaitable(value):
+        return value
+
+    coordinator.spa = SimpleNamespace(
+        get_filtration=lambda: _awaitable({"totalRuntime": 3, "inBetweenCycles": 12}),
+        get_lock_mode=lambda: _awaitable(1),
+        get_timeout=lambda: _awaitable(30),
+        get_sanitise_time=lambda: _awaitable("08:30"),
+        get_sanitise_status=lambda: _awaitable(True),
+        get_date_time=lambda: _awaitable("2026-04-03 14:30:00"),
+        get_support_mode=lambda: _awaitable("off"),
+        get_power_save=lambda: _awaitable({"mode": 2}),
+        get_operation_mode=lambda: _awaitable(3),
+        get_heat_pump=lambda: _awaitable({"mode": 4}),
+    )
+
+    await coordinator.update_settings()
+
+    assert coordinator.state[const.SK_FILTRATION_RUNTIME] == 3
+    assert coordinator.state[const.SK_FILTRATION_CYCLE] == 12
+    assert coordinator.state[const.SK_LOCK_MODE] == "on"
+    assert coordinator.state[const.SK_POWER_SAVE] == "Low"
+    assert coordinator.state[const.SK_OPERATION_MODE] == "Away"
+    assert coordinator.state[const.SK_HEAT_PUMP] == "Off"
+    assert coordinator.state[const.SK_SANITISE_STATUS] == "on"

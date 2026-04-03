@@ -32,9 +32,6 @@ SL_HEATING = "Heating"
 SL_SLEEPING = "Sleeping"
 SL_SANITISE = "Sanitise"
 
-OPERATION_MODES = ["Unknown", "Normal", "Economy", "Away", "Weekend"]
-POWER_SAVE = ["Unknown", "Off", "Low", "High"]
-HEAT_PUMP = ["Auto", "Heat", "Cool", "Off"]
 SANITISER = ["Off", "On"]
 
 OPT_ENABLE_HEAT_PUMP = "enable_heat_pump"

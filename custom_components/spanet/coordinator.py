@@ -4,11 +4,16 @@ from datetime import timedelta
 import async_timeout
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api_mappings import (
+    LIGHT_ANIMATION_OPTIONS,
+    OPERATION_MODE_OPTIONS,
+    heat_pump_from_api,
+    lock_mode_from_api,
+    operation_mode_from_api,
+    power_save_from_api,
+)
 from .const import (
-    HEAT_PUMP,
-    OPERATION_MODES,
     OPT_ENABLE_HEAT_PUMP,
-    POWER_SAVE,
     SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_DATE_TIME,
@@ -151,13 +156,13 @@ class Coordinator(DataUpdateCoordinator):
             return
 
         current_animation = self.state.get(SK_LIGHT_ANIMATION)
-        mode = current_animation if current_animation in {"Fade", "Step", "Party"} else "Fade"
+        mode = current_animation if current_animation in LIGHT_ANIMATION_OPTIONS else "Fade"
         await self.set_light_mode(mode)
         self.state[SK_LIGHT_PROFILE] = "Animated"
         self.state[SK_LIGHT_ANIMATION] = mode
 
     async def set_light_animation(self, animation: str):
-        if animation not in {"Fade", "Step", "Party"}:
+        if animation not in LIGHT_ANIMATION_OPTIONS:
             return
         await self.set_light_mode(animation)
         self.state[SK_LIGHT_PROFILE] = "Animated"
@@ -170,13 +175,17 @@ class Coordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def set_operation_mode(self, mode: str):
-        mode_index = OPERATION_MODES.index(mode)
+        from .api_mappings import OPERATION_MODE_API_BY_LABEL
+
+        mode_index = OPERATION_MODE_API_BY_LABEL[mode]
         await self.spa.set_operation_mode(mode_index)
         self.state[SK_OPERATION_MODE] = mode
         await self.async_request_refresh()
 
     async def set_power_save(self, mode: str):
-        mode_index = POWER_SAVE.index(mode)
+        from .api_mappings import POWER_SAVE_API_BY_LABEL
+
+        mode_index = POWER_SAVE_API_BY_LABEL[mode]
         await self.spa.set_power_save(mode_index)
         self.state[SK_POWER_SAVE] = mode
         await self.async_request_refresh()
@@ -279,8 +288,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def set_heat_pump(self, mode: str):
-        mode_index = HEAT_PUMP.index(mode)
-        await self.spa.set_heat_pump(mode_index)
+        await self.spa.set_heat_pump(mode)
         self.state[SK_HEAT_PUMP] = mode
         await self.async_request_refresh()
 
@@ -351,7 +359,7 @@ class Coordinator(DataUpdateCoordinator):
 
     async def set_lock_mode_switch(self, value: str):
         mode = 1 if value == "on" else 0
-        self.state[SK_LOCK_MODE] = mode
+        self.state[SK_LOCK_MODE] = value
         await self.spa.set_lock_mode(mode)
         await self.async_request_refresh()
 
@@ -430,21 +438,17 @@ class Coordinator(DataUpdateCoordinator):
         information_data = await self.spa.get_information()
         settings_summary = information_data.get("information", {}).get("settingsSummary", {})
 
-        operation_mode = self.fuzzy_find(OPERATION_MODES, settings_summary.get("operationMode"))
-        self.state[SK_OPERATION_MODE] = operation_mode or OPERATION_MODES[0]
+        operation_mode = self.fuzzy_find(OPERATION_MODE_OPTIONS, settings_summary.get("operationMode"))
+        self.state[SK_OPERATION_MODE] = operation_mode or "Unknown"
 
         try:
-            power_save = int(settings_summary.get("powersaveTimer", {}).get("mode"))
-            self.state[SK_POWER_SAVE] = POWER_SAVE[power_save]
-        except (TypeError, ValueError, IndexError):
-            self.state[SK_POWER_SAVE] = POWER_SAVE[0]
+            power_save = settings_summary.get("powersaveTimer", {}).get("mode")
+            self.state[SK_POWER_SAVE] = power_save_from_api(power_save)
+        except AttributeError:
+            self.state[SK_POWER_SAVE] = "Unknown"
 
         if self.config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
-            try:
-                heat_pump = int(settings_summary.get("heatPumpMode"))
-                self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
-            except (TypeError, ValueError, IndexError):
-                self.state[SK_HEAT_PUMP] = HEAT_PUMP[-1]
+            self.state[SK_HEAT_PUMP] = "Off"
         else:
             self.state[SK_HEAT_PUMP] = "Off"
 
@@ -488,7 +492,7 @@ class Coordinator(DataUpdateCoordinator):
             "colour": light_details.get("colour", light_details.get("lightColour")),
         }
         mode = str(self.state[SK_LIGHTS].get("mode") or "")
-        if mode in {"Fade", "Step", "Party"}:
+        if mode in LIGHT_ANIMATION_OPTIONS:
             self.state[SK_LIGHT_PROFILE] = "Animated"
             self.state[SK_LIGHT_ANIMATION] = mode
         else:
@@ -501,9 +505,9 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_FILTRATION_CYCLE] = int(filtration.get("inBetweenCycles", 0))
 
         try:
-            self.state[SK_LOCK_MODE] = int(await self.spa.get_lock_mode())
+            self.state[SK_LOCK_MODE] = lock_mode_from_api(await self.spa.get_lock_mode())
         except (TypeError, ValueError):
-            self.state[SK_LOCK_MODE] = 0
+            self.state[SK_LOCK_MODE] = "off"
 
         try:
             self.state[SK_TIMEOUT] = int(await self.spa.get_timeout())
@@ -521,10 +525,22 @@ class Coordinator(DataUpdateCoordinator):
 
         try:
             power_save = await self.spa.get_power_save()
-            mode = int(power_save.get("mode"))
-            self.state[SK_POWER_SAVE] = POWER_SAVE[mode]
-        except (TypeError, ValueError, IndexError, AttributeError):
+            self.state[SK_POWER_SAVE] = power_save_from_api(power_save.get("mode"))
+        except AttributeError:
             pass
+
+        try:
+            operation_mode = await self.spa.get_operation_mode()
+            self.state[SK_OPERATION_MODE] = operation_mode_from_api(operation_mode)
+        except (TypeError, ValueError, AttributeError):
+            pass
+
+        if self.config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
+            try:
+                heat_pump = await self.spa.get_heat_pump()
+                self.state[SK_HEAT_PUMP] = heat_pump_from_api(heat_pump.get("mode"))
+            except (TypeError, ValueError, AttributeError):
+                self.state[SK_HEAT_PUMP] = "Off"
 
     @staticmethod
     def fuzzy_find(modes, mode):
