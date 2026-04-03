@@ -29,6 +29,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target || github.ref }}
 
+      - name: Read manifest version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import json, pathlib; print(json.loads(pathlib.Path('custom_components/spanet/manifest.json').read_text())['version'])")
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Resolve tag
         id: tag
         shell: bash
@@ -38,14 +45,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           else
-            VERSION=$(python - <<'PY'
-            import json
-            from pathlib import Path
-            manifest = json.loads(Path("custom_components/spanet/manifest.json").read_text())
-            print(manifest["version"])
-            PY
-            )
-            echo "name=v${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "name=v${{ steps.version.outputs.value }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Validate manifest version matches tag
@@ -53,13 +53,7 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.name }}"
           VERSION="${TAG#v}"
-          MANIFEST_VERSION=$(python - <<'PY'
-          import json
-          from pathlib import Path
-          manifest = json.loads(Path("custom_components/spanet/manifest.json").read_text())
-          print(manifest["version"])
-          PY
-          )
+          MANIFEST_VERSION="${{ steps.version.outputs.value }}"
           if [ "$MANIFEST_VERSION" != "$VERSION" ]; then
             echo "manifest.json version ($MANIFEST_VERSION) does not match tag ($VERSION)"
             exit 1
