@@ -11,6 +11,7 @@ from .const import (
     POWER_SAVE,
     SK_BLOWER,
     SK_ELEMENT_BOOST,
+    SK_ELEMENT_BOOST_SUPPORTED,
     SK_FILTRATION_CYCLE,
     SK_FILTRATION_RUNTIME,
     SK_HEATER,
@@ -223,9 +224,18 @@ class Coordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def set_element_boost(self, value: str):
+        if not self.state.get(SK_ELEMENT_BOOST_SUPPORTED, False):
+            logger.warning("Element Boost not supported for spa %s", self.spa_id)
+            return
+
         on = value == "on"
-        await self.spa.set_element_boost(on)
-        self.state[SK_ELEMENT_BOOST] = value
+        try:
+            await self.spa.set_element_boost(on)
+        except SpaNetApiError as exc:
+            logger.warning("Failed to set Element Boost for spa %s: %s", self.spa_id, exc)
+            return
+
+        self.state[SK_ELEMENT_BOOST] = "on" if on else "off"
         await self.async_request_refresh()
 
     async def set_oxy(self, value: str):
@@ -349,14 +359,18 @@ class Coordinator(DataUpdateCoordinator):
                 self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
             except (TypeError, ValueError, IndexError):
                 self.state[SK_HEAT_PUMP] = HEAT_PUMP[-1]
+        else:
+            self.state[SK_HEAT_PUMP] = "Off"
 
-            element_boost = settings_summary.get("hpElementBoost")
+        element_boost = settings_summary.get("hpElementBoost")
+        is_supported = element_boost is not None
+        self.state[SK_ELEMENT_BOOST_SUPPORTED] = is_supported
+        if is_supported:
             self.state[SK_ELEMENT_BOOST] = (
                 "on" if str(element_boost).lower() in {"1", "true"} else "off"
             )
-        else:
-            self.state[SK_HEAT_PUMP] = "Off"
-            self.state[SK_ELEMENT_BOOST] = "off"
+        elif SK_ELEMENT_BOOST not in self.state:
+            self.state[SK_ELEMENT_BOOST] = None
 
         timers = {}
         for t in settings_summary.get("sleepTimers", []):

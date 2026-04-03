@@ -11,9 +11,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    OPT_ENABLE_HEAT_PUMP,
     SK_BLOWER,
     SK_ELEMENT_BOOST,
+    SK_ELEMENT_BOOST_SUPPORTED,
     SK_LIGHTS,
     SK_OXY,
     SK_PUMPS,
@@ -76,15 +76,15 @@ async def async_setup_entry(
                 )
             )
 
-        if config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
-            entities.append(
-                SpaSwitch(
-                    coordinator,
-                    "Element Boost",
-                    SK_ELEMENT_BOOST,
-                    coordinator.set_element_boost,
-                )
+        entities.append(
+            SpaSwitch(
+                coordinator,
+                "Element Boost",
+                SK_ELEMENT_BOOST,
+                coordinator.set_element_boost,
+                availability_key=SK_ELEMENT_BOOST_SUPPORTED,
             )
+        )
 
     async_add_entity(entities)
     return True
@@ -95,11 +95,20 @@ class SpaSwitch(SpaEntity, SwitchEntity):
 
     _attr_device_class = SwitchDeviceClass.SWITCH
 
-    def __init__(self, coordinator, name, state_key, switch_callback) -> None:
+    def __init__(
+        self, coordinator, name, state_key, switch_callback, availability_key: str | None = None
+    ) -> None:
         super().__init__(coordinator, "switch", name)
         self.hass = coordinator.hass
         self._state_key = state_key
         self._switch_callback = switch_callback
+        self._availability_key = availability_key
+
+    @property
+    def available(self) -> bool:
+        if self._availability_key is None:
+            return True
+        return bool(self.coordinator.state.get(self._availability_key, False))
 
     @property
     def is_on(self):
