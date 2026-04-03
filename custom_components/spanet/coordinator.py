@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Coordinator(DataUpdateCoordinator):
     """My custom coordinator."""
 
-    def __init__(self, hass, spanet, spa_config):
+    def __init__(self, hass, spanet, spa_config, config_entry):
         """Initialize my coordinator."""
         super().__init__(
             hass,
@@ -24,15 +24,17 @@ class Coordinator(DataUpdateCoordinator):
         )
         self.spanet = spanet
         self.spa_config = spa_config
+        self.config_entry = config_entry
         self.state = {}
         self.spa = None
 
         self.scheduler = Scheduler()
 
-        dashboard_task = self.scheduler.add_task(120, self.update_dashboard)
         self.tasks = [
+            self.scheduler.add_task(120, self.update_dashboard),
             self.scheduler.add_task(300, self.update_pumps),
             self.scheduler.add_task(1200, self.update_information),
+            self.scheduler.add_task(1200, self.update_lights)
         ]
 
     @property
@@ -42,6 +44,9 @@ class Coordinator(DataUpdateCoordinator):
     @property
     def spa_id(self):
         return self.spa_config["id"]
+
+    def queue_refresh(self):
+        self.tasks[0].trigger(20)
 
     def get_state(self, key: str, sub_key=None):
         obj = self.state
@@ -68,13 +73,23 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_temperature(temp)
         logger.debug(f"SET TEMP: {temp} -> {self.state}")
         await self.async_request_refresh()
+        self.queue_refresh()
 
     async def set_pump(self, key: str, state: str):
-        pump = self.get_state(f"pumps.{key}")
+        pump = self.get_state(f"{SK_PUMPS}.{key}")
         pump["state"] = state
         await self.spa.set_pump(pump["apiId"], state)
         logger.debug(f"SET PUMP {key}: {state} -> {self.state}")
         await self.async_request_refresh()
+        self.queue_refresh()
+
+    async def set_lights(self, state: str):
+        lights = self.get_state(f"{SK_LIGHTS}")
+        lights["state"] = state
+        await self.spa.set_light_status(lights["apiId"], 1 if state == "on" else 0)
+        logger.debug(f"SET LIGHTS: {state} -> {self.state}")
+        await self.async_request_refresh()
+        self.queue_refresh()
 
     async def set_operation_mode(self, mode: str):
         modeIndex = OPERATION_MODES.index(mode)
@@ -96,6 +111,13 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_power_save(modeIndex)
         self.state[SK_POWER_SAVE] = mode
         logger.debug(f"SET POWER SAVE: {mode} -> {self.state}")
+        await self.async_request_refresh()
+
+    async def set_sleep_timer(self, key: str, value: str):
+        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        timer["state"] = value
+        await self.spa.set_sleep_timer(timer["apiId"], timer['number'], value == "on")
+        logger.debug(f"SET SLEEP TIMER {key}: {value} -> {self.state}")
         await self.async_request_refresh()
 
     async def set_heat_pump(self, mode: str):
@@ -167,7 +189,7 @@ async def update_dashboard(self):
         self.state[SK_SANITISE] = 1 if SL_SANITISE in status_list else 0
 
         if force_refresh:
-            for task in self.tasks:
+            for task in self.tasks[1:]:
                 task.trigger()
 
 async def update_pumps(self):
@@ -192,17 +214,42 @@ async def update_information(self):
         information_data = await self.spa.get_information()
         logger.debug(f"Update Information {information_data}")
 
-        operation_mode = self.fuzzyFind(OPERATION_MODES, information_data["information"]["settingsSummary"]["operationMode"])
+        settingsSummary = information_data.get("information", {}).get("settingsSummary", {})
+
+        operation_mode = self.fuzzyFind(OPERATION_MODES, settingsSummary.get("operationMode"))
         self.state[SK_OPERATION_MODE] = operation_mode
 
-        power_save = int(information_data["information"]["settingsSummary"]["powersaveTimer"]["mode"])
+        power_save = int(settingsSummary.get("powersaveTimer", {}).get("mode"))
         self.state[SK_POWER_SAVE] = POWER_SAVE[power_save]
 
-        heat_pump = int(information_data["information"]["settingsSummary"]["heatPumpMode"])
-        self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
+        if self.config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
+            heat_pump = int(settingsSummary.get("heatPumpMode"))
+            self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
 
-        element_boost = information_data["information"]["settingsSummary"]["hpElementBoost"]
-        self.state[SK_ELEMENT_BOOST] = "on" if element_boost == "1" else "off"
+            element_boost = settingsSummary.get("hpElementBoost")
+            self.state[SK_ELEMENT_BOOST] = "on" if element_boost == "1" else "off"
+        else:
+            self.state[SK_HEAT_PUMP] = 'Off'
+            self.state[SK_ELEMENT_BOOST] = "off"
+
+        timers = {}
+        for t in settingsSummary.get("sleepTimers", []):
+            timer_id = str(t["timerNumber"])
+            if not timer_id in timers:
+                timers[timer_id] = {}
+            timer = timers.get(timer_id)
+            timer['number'] = t["timerNumber"]
+            timer["apiId"] = t["id"]
+            timer["state"] = 'on' if t["isEnabled"] else 'off'
+        self.state[SK_SLEEP_TIMERS] = timers
+
+    async def update_lights(self):
+        light_details = await self.spa.get_light_details()
+        logger.debug(f"Update Lights {light_details}")
+        self.state[SK_LIGHTS] = {
+            "apiId": light_details.get('lightId'),
+            "state": "on" if light_details.get('lightOn') else "off"
+        }
 
 def fuzzyFind(self, modes, mode):
         for m in modes:

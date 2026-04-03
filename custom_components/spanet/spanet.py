@@ -24,10 +24,16 @@ class SpaNetPoolUnknown(SpaNetException):
 
 
 class SpaNetApiError(SpaNetException):
-    """SpaPool connection failed"""
+    """SpaNet api error"""
     def __init__(self, response, body):
         self.response = response
         super().__init__(f"API Error {response.status}: {body}")
+
+class SpaNetResponseError(SpaNetException):
+    """SpaNet response error"""
+    def __init__(self, response, message):
+        self.response = response
+        super().__init__(message)
 
 
 class SpaPool:
@@ -83,6 +89,12 @@ class SpaPool:
     async def set_power_save(self, mode: int):
         return await self.client.put("/Settings/PowerSave/" + self.id, { "mode": mode })
 
+    async def get_sleep_timer(self, index:int):
+        return await self.client.get("/SleepTimers/" + self.id)
+
+    async def set_sleep_timer(self, timer_id: int, timer_number: int, enabled: int):
+        return await self.client.put("/SleepTimers/" + str(timer_id), { "deviceId": self.id, "timerNumber": timer_number, "enabled": enabled == 1 })
+
     async def set_heat_pump(self, mode: int):
         return await self.client.put("/Settings/SetHeatPumpMode/" + self.id, { "mode": mode + 1 })
     
@@ -90,7 +102,13 @@ class SpaPool:
         return await self.client.put("/Settings/Sanitise/" + self.id, { "mode": mode + 1 })
 
     async def set_element_boost(self, on: int):
-        return await self.client.put("/Settings/SetElementBoost/" + self.id, { "svElementBoost": True if on == 1 else False })
+        return await self.client.put("/Settings/SetElementBoost/" + self.id, { "svElementBoost": on == 1 })
+
+    async def get_light_details(self):
+        return await self.client.get("/Lights/GetLightDetails/" + self.id)
+
+    async def set_light_status(self, light_id: int, on: int):
+        return await self.client.put("/Lights/SetLightStatus/" + str(light_id), { "deviceId": self.id, "on": on == 1 })
 
 
 class SpaNet:
@@ -177,15 +195,18 @@ class HttpClient:
 
     async def check_response(self, response, requires_json=False):
         if response.status > 299:
-            self.raise_api_error(response)
+            await self.raise_api_error(response)
 
         is_json = response.headers.get("Content-Type", "").startswith("application/json")
 
         if not is_json and requires_json:
-            self.raise_api_error(response)
+            await self.raise_api_error(response)
 
         if is_json:
-            return await response.json()
+            data = await response.json()
+            if not isinstance(data, dict):
+                raise SpaNetResponseError(f"Request to {response.url} received unexpected {type(data).__name__} response: {data}")
+            return data
 
         return await response.text()
 
