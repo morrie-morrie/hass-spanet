@@ -79,9 +79,11 @@ class FakeSession:
 class FakeClient:
     def __init__(self):
         self.calls = []
+        self.get_calls = []
 
-    async def get(self, path):
+    async def get(self, path, requires_json=True):
         self.calls.append(("get", path, None))
+        self.get_calls.append(("get", path, requires_json))
         if path == "/SleepTimers/99":
             return [
                 {
@@ -132,6 +134,17 @@ async def test_set_sanitise_time_payload():
     _, path, payload = client.calls[-1]
     assert path == "/Settings/Sanitise/99"
     assert payload == {"time": "08:30"}
+
+
+@pytest.mark.asyncio
+async def test_get_sanitise_time_allows_plain_text_response():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    result = await pool.get_sanitise_time()
+
+    assert result == {}
+    assert client.get_calls[-1] == ("get", "/Settings/Sanitise/99", False)
 
 
 @pytest.mark.asyncio

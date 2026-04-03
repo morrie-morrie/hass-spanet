@@ -207,7 +207,7 @@ class SpaPool:
         )
 
     async def get_sanitise_time(self):
-        return await self.client.get(f"/Settings/Sanitise/{self.id}")
+        return await self.client.get(f"/Settings/Sanitise/{self.id}", requires_json=False)
 
     async def set_sanitise_time(self, value: str):
         return await self.client.put(f"/Settings/Sanitise/{self.id}", {"time": value})
@@ -370,9 +370,9 @@ class HttpClient:
         response = await self.session.delete(BASE_URL + path, headers=await self.build_headers())
         return await self.check_response(response)
 
-    async def get(self, path):
+    async def get(self, path, requires_json=True):
         response = await self.session.get(BASE_URL + path, headers=await self.build_headers())
-        return await self.check_response(response, True)
+        return await self.check_response(response, requires_json)
 
     async def build_headers(self):
         headers = {

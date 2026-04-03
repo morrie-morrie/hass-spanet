@@ -38,7 +38,7 @@ async def async_setup_entry(
         entities.extend(
             [
                 SpaBinarySensor(coordinator, "Heater", SK_HEATER),
-                SpaBinarySensor(coordinator, "Sanitise", SK_SANITISE),
+                SpaBinarySensor(coordinator, "Sanitise Active", SK_SANITISE),
                 SpaBinarySensor(coordinator, "Sleeping", SK_SLEEPING),
             ]
         )
