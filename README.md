@@ -1,37 +1,96 @@
+# SpaNET for Home Assistant
 
+Maintained fork of the original [`lloydw/hass-spanet`](https://github.com/lloydw/hass-spanet) integration.
 
-# hass-spanet - supports new SpaNET v2 protocol
-
-Fork note: This repository is a maintained fork of the original `lloydw/hass-spanet` project by `@lloydw`.
-Credit and thanks to the original author for building and open-sourcing the integration.
+This fork is published from [`morrie-morrie/hass-spanet`](https://github.com/morrie-morrie/hass-spanet) and keeps credit to the original author for the initial implementation.
 
 <img src="https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.spanet.total" align="right">
-Control your SpaNET Spa with Home Assistant
 
-<br/>
-<br/>
+Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morrie-morrie&repository=hass-spanet&category=Integration)
+[![Open your Home Assistant instance and open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morrie-morrie&repository=hass-spanet&category=Integration)
 
-### Current Progress
+## Features
 
- - [x] Sensors
- - [x] HVAC Control
- - [x] Pumps
- - [x] Operation Mode
- - [x] Power Save
- - [x] Sleep Timers
- - [x] HeatPump Support (Enable via Configure screen)
- - [x] Lights (on/off)
+- Climate control for spa set temperature
+- Water temperature, heater, sanitise, and sleeping sensors
+- Pump control driven by live spa capabilities
+  - `Pump 1`: `off / auto / on` when auto mode is supported
+  - binary fallback for pumps that only support `off / on`
+- Blower control
+  - `Blower Mode`: `off / ramp / variable`
+  - `Blower Speed`: `1-5` when blower mode is `variable`
+- Native light entity plus advanced light controls
+  - on/off
+  - brightness `1-5`
+  - profile: `Single` or `Animated`
+  - animation: `Fade`, `Step`, `Party`
+  - animation speed `1-5`
+- Settings entities for:
+  - Operation Mode
+  - Power Save
+  - Heat Pump mode
+  - Element Boost
+  - Filtration Runtime
+  - Filtration Cycle Gap
+  - Timeout
+  - Sanitise Time
+  - Sleep Timers
 
-### Tested with Home Assistant 2025.11
+## Configuration
 
-# configuration
+Add the integration in Home Assistant and enter your SpaNET email address and password.
 
-Simply add the plugin and then provide your SpaNET email and password, all Spas on your account will accessible.
+All spas on the account are discovered and added under the one config entry.
 
-# dashboards
-<img width="334" align="center" alt="Climate" src="https://github.com/lloydw/hass-spanet/assets/297244/f3ab03b6-e5a9-43fd-bdc5-dcf80f7e64e6">
+### Options
 
-<img width="330" align="center" alt="Sensors" src="https://github.com/lloydw/hass-spanet/assets/297244/6d907414-d23e-4880-bcbc-892d7085614e">
-<img width="330" align="center" alt="Graphs" src="https://github.com/lloydw/hass-spanet/assets/297244/98c5cbf1-18e1-4696-8132-4e5604ed8c07">
+- `Enable Heat Pump`
+  - Enables the Heat Pump mode entity
+  - Enables the Element Boost switch
+  - If disabled, Element Boost is not added
+
+## Entity model
+
+This fork prefers native Home Assistant entities where the API contract is clear and uses services for the more advanced or underdocumented actions.
+
+### Pumps
+
+- Pumps are created from the live `PumpsAndBlower/Get` response
+- Auto-capable pumps are exposed as `select` entities
+- Binary-only pumps are exposed as `switch` entities
+- Duplicate pump entities are intentionally avoided
+
+### Blower
+
+- No blower switch is created
+- Mode is handled with a `select`
+- Speed is handled with a `number`
+
+### Lights
+
+- `Light` is exposed as a native HA `light` entity
+- Advanced light controls are exposed as select/number entities and services
+
+## Services
+
+Domain: `spanet`
+
+- `set_light_mode`
+- `set_light_colour`
+- `create_sleep_timer`
+- `update_sleep_timer`
+- `delete_sleep_timer`
+- `set_sanitise_status`
+
+## Notes
+
+- This integration uses the SpaNET cloud API and is therefore `cloud_polling`
+- Some controls depend on the capabilities reported by the spa and may vary between models
+- Entity availability is intentionally driven by live API support where possible
+
+## Repository
+
+- Source: [morrie-morrie/hass-spanet](https://github.com/morrie-morrie/hass-spanet)
+- Original project: [lloydw/hass-spanet](https://github.com/lloydw/hass-spanet)
+- Issues: [morrie-morrie/hass-spanet/issues](https://github.com/morrie-morrie/hass-spanet/issues)
