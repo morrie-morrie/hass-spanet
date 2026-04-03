@@ -481,6 +481,39 @@ async def test_update_pumps_ignores_circulation_pump_and_uses_blower_variable_sp
 
 
 @pytest.mark.asyncio
+async def test_update_pumps_treats_vari_status_as_on():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.state = {}
+
+    async def _get_pumps():
+        return {
+            "pumpAndBlower": {
+                "pumps": [
+                    {
+                        "id": 12,
+                        "pumpNumber": 1,
+                        "hasAuto": False,
+                        "pumpSpeed": 1,
+                        "canSwitchOn": True,
+                        "pumpStatus": "vari",
+                    }
+                ],
+                "blower": {},
+            }
+        }
+
+    coordinator.spa = SimpleNamespace(get_pumps=_get_pumps)
+    await coordinator.update_pumps()
+
+    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "on"
+
+
+@pytest.mark.asyncio
 async def test_update_lights_normalizes_lowercase_animation_modes():
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),

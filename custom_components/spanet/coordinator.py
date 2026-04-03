@@ -460,7 +460,7 @@ class Coordinator(DataUpdateCoordinator):
             raw_state = str(p.get("pumpStatus", "off")).lower()
             if raw_state == "auto":
                 normalized_state = "auto"
-            elif raw_state in {"on", "high", "low", "1"}:
+            elif raw_state in {"on", "high", "low", "1", "vari", "variable"}:
                 normalized_state = "on"
             else:
                 normalized_state = "off"

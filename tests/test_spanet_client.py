@@ -256,6 +256,18 @@ async def test_set_pump_payload_matches_contract_mapping():
 
 
 @pytest.mark.asyncio
+async def test_set_pump_on_payload_uses_live_confirmed_mode_id():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_pump("7", "on")
+
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/7"
+    assert payload == {"deviceId": 99, "modeId": 4, "pumpVariableSpeed": 0}
+
+
+@pytest.mark.asyncio
 async def test_set_blower_payload_matches_contract_mapping():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
