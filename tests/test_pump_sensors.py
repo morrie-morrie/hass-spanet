@@ -156,6 +156,9 @@ async def test_pump_binary_sensors_created_for_switch_pumps():
     created = []
     await binary_sensor_module.async_setup_entry(hass, config_entry, created.extend)
 
+    sanitise = next(entity for entity in created if entity._attr_name == "Sanitise Active")
+    assert sanitise.is_on is False
+
     pump_entities = [entity for entity in created if entity._attr_name.startswith("Pump")]
     assert [entity._attr_name for entity in pump_entities] == ["Pump 1", "Pump 2"]
     assert all(entity.entity_id.startswith("binary_sensor.") for entity in pump_entities)

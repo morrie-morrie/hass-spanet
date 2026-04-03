@@ -43,6 +43,7 @@ RETIRED_ENTITY_NAMES_BY_DOMAIN = {
     "sensor": {"Support Mode"},
     "switch": {"Sanitise Status", "Lock Mode"},
     "time": {"Sanitise Time"},
+    "binary_sensor": {"Sanitise"},
     "number": {
         "Light Brightness",
         "Light Speed",

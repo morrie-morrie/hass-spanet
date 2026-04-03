@@ -120,13 +120,13 @@ coordinator_module = _load("custom_components.spanet.coordinator", "coordinator.
 
 
 @pytest.mark.asyncio
-async def test_sanitise_button_created_when_status_available():
+async def test_sanitise_button_created_without_status_gate():
     class _Coordinator:
         def __init__(self):
             self.hass = SimpleNamespace()
             self.spa_name = "My Spa"
             self.spa_id = "1"
-            self.state = {const.SK_SANITISE_STATUS: "off"}
+            self.state = {}
             self.called = 0
 
         async def trigger_sanitise(self):
