@@ -99,12 +99,12 @@ Domain: `spanet`
 
 HACS shows commit hashes when the repository has no version tags or GitHub releases. This fork now includes a release workflow that publishes GitHub releases from semantic version tags.
 
-### Normal release
+### Automatic release from `main`
 
 1. Update `custom_components/spanet/manifest.json` with the new version
-2. Commit the change to `main`
-3. Push a matching Git tag, for example `v1.1.15`
-4. GitHub Actions publishes the GitHub release automatically
+2. Commit the change
+3. Push to `main`
+4. GitHub Actions creates the matching tag and GitHub release automatically
 
 Example:
 
@@ -112,15 +112,22 @@ Example:
 git add custom_components/spanet/manifest.json README.md
 git commit -m "Release 1.1.15"
 git push origin main
-git tag v1.1.15
-git push origin v1.1.15
 ```
 
-### Manual release
+The workflow derives the tag from `manifest.json`, for example version `1.1.15` becomes tag `v1.1.15`.
+
+### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
 - `tag`: the release tag, for example `v1.1.15`
 - `target`: the git ref to release from, default `main`
 
-The workflow validates that the tag matches `manifest.json` before creating the release.
+Or push a matching tag directly:
+
+```powershell
+git tag v1.1.15
+git push origin v1.1.15
+```
+
+The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.
