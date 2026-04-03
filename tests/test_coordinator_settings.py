@@ -1,5 +1,6 @@
 import importlib.util
 import sys
+import time
 import types
 from pathlib import Path
 from types import SimpleNamespace
@@ -131,6 +132,35 @@ class _Spa:
             },
         ]
 
+    async def set_timeout(self, value):
+        self.timeout_value = value
+
+    async def set_filtration(self, total_runtime: int, in_between_cycles: int):
+        self.filtration_value = (total_runtime, in_between_cycles)
+
+    async def update_sleep_timer(
+        self,
+        timer_id: int,
+        timer_number: int,
+        timer_name: str,
+        start_time: str,
+        end_time: str,
+        days_hex: str,
+        is_enabled: bool,
+    ):
+        self.updated_timer = {
+            "timer_id": timer_id,
+            "timer_number": timer_number,
+            "timer_name": timer_name,
+            "start_time": start_time,
+            "end_time": end_time,
+            "days_hex": days_hex,
+            "is_enabled": is_enabled,
+        }
+
+    async def set_sleep_timer_enabled(self, timer_id: int, enabled: bool):
+        self.sleep_timer_enabled = {"timer_id": timer_id, "enabled": enabled}
+
 
 @pytest.mark.asyncio
 async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
@@ -152,3 +182,53 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["state"] == "off"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["dayProfile"] == "Every Day"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["dayProfile"] == "Weekends"
+
+
+@pytest.mark.asyncio
+async def test_settings_writes_queue_immediate_settings_refresh():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=SimpleNamespace(),
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.spa = _Spa()
+    coordinator.state = {
+        const.SK_FILTRATION_RUNTIME: 3,
+        const.SK_FILTRATION_CYCLE: 12,
+        const.SK_TIMEOUT: 20,
+        const.SK_SLEEP_TIMERS: {
+            "1": {
+                "apiId": 11,
+                "number": 1,
+                "name": "Timer 1",
+                "startTime": "22:00",
+                "endTime": "08:30",
+                "daysHex": "7F",
+                "isEnabled": True,
+                "state": "on",
+            }
+        },
+    }
+
+    requested = {"count": 0}
+
+    async def _request_refresh():
+        requested["count"] += 1
+
+    coordinator.async_request_refresh = _request_refresh
+
+    await coordinator.set_timeout(30)
+    assert coordinator.tasks[4].next_tick <= int(time.time())
+
+    coordinator.tasks[4].next_tick = 999
+    await coordinator.set_sleep_timer("1", "off")
+    assert coordinator.tasks[4].next_tick <= int(time.time())
+    assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["state"] == "off"
+
+    coordinator.tasks[4].next_tick = 999
+    await coordinator.set_sleep_timer_on_time("1", "21:00")
+    assert coordinator.tasks[4].next_tick <= int(time.time())
+    assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["startTime"] == "21:00"
+
+    assert requested["count"] == 3
