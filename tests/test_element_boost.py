@@ -164,7 +164,7 @@ class _FakeFailSpa:
 
 
 @pytest.mark.asyncio
-async def test_element_boost_switch_always_created_and_id_stable():
+async def test_element_boost_switch_only_created_when_heat_pump_option_enabled():
     class _Coordinator:
         def __init__(self):
             self.hass = SimpleNamespace()
@@ -210,6 +210,11 @@ async def test_element_boost_switch_always_created_and_id_stable():
     def _add_entities(entities):
         created.extend(entities)
 
+    await switch_module.async_setup_entry(hass, config_entry, _add_entities)
+    assert not any(e for e in created if e._attr_name.endswith("Element Boost"))
+
+    config_entry.options["enable_heat_pump"] = True
+    created.clear()
     await switch_module.async_setup_entry(hass, config_entry, _add_entities)
 
     element = next(e for e in created if e._attr_name.endswith("Element Boost"))

@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    OPT_ENABLE_HEAT_PUMP,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_LOCK_MODE,
@@ -85,16 +86,17 @@ async def async_setup_entry(
                 )
             )
 
-        entities.append(
-            SpaSwitch(
-                coordinator,
-                "Element Boost",
-                SK_ELEMENT_BOOST,
-                coordinator.set_element_boost,
-                availability_key=SK_ELEMENT_BOOST_SUPPORTED,
-                entity_category=EntityCategory.CONFIG,
+        if config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
+            entities.append(
+                SpaSwitch(
+                    coordinator,
+                    "Element Boost",
+                    SK_ELEMENT_BOOST,
+                    coordinator.set_element_boost,
+                    availability_key=SK_ELEMENT_BOOST_SUPPORTED,
+                    entity_category=EntityCategory.CONFIG,
+                )
             )
-        )
 
     async_add_entity(entities)
     return True
