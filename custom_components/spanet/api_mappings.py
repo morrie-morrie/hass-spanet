@@ -49,6 +49,7 @@ BLOWER_STATE_TO_API = {
 }
 
 LIGHT_ANIMATION_OPTIONS = ["Fade", "Step", "Party"]
+PUMP_SELECT_OPTIONS = ["off", "auto", "on"]
 
 
 def _coerce_int(value: Any) -> int | None:

@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api_mappings import (
     HEAT_PUMP_OPTIONS,
     OPERATION_MODE_OPTIONS,
+    PUMP_SELECT_OPTIONS,
     POWER_SAVE_OPTIONS,
 )
 from .const import (
@@ -24,6 +25,7 @@ from .const import (
     SK_HEAT_PUMP,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
+    SK_PUMPS,
     SK_SLEEP_TIMERS,
     SK_TIMEOUT,
 )
@@ -105,7 +107,19 @@ async def async_setup_entry(
                 )
             )
 
-        for k, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
+        for k, v in sorted(coordinator.state.get(SK_PUMPS, {}).items()):
+            if v.get("hasSwitch", False) and v.get("auto", False):
+                entities.append(
+                    SpaSelect(
+                        coordinator,
+                        f"Pump {k}",
+                        f"{SK_PUMPS}.{k}.state",
+                        PUMP_SELECT_OPTIONS,
+                        partial(coordinator.set_pump, k),
+                    )
+                )
+
+        for k, _ in coordinator.state.get(SK_SLEEP_TIMERS, {}).items():
             entities.append(
                 SpaSelect(
                     coordinator,
@@ -150,7 +164,10 @@ class SpaSelect(SpaEntity, SelectEntity):
 
     @property
     def current_option(self):
-        return self.coordinator.get_state(self._state_key)
+        value = self.coordinator.get_state(self._state_key)
+        if value in self._options:
+            return value
+        return None
 
     @property
     def options(self):
@@ -168,7 +185,10 @@ class SpaNumericSelect(SpaSelect):
         value = self.coordinator.get_state(self._state_key)
         if value is None:
             return None
-        return str(int(value))
+        option = str(int(value))
+        if option in self._options:
+            return option
+        return None
 
     async def async_select_option(self, option):
         await self._setter(int(option))

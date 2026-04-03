@@ -41,8 +41,8 @@ async def async_setup_entry(
     entities = []
 
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
-        for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
-            if v.get("hasSwitch", False):
+        for k, v in sorted(coordinator.state.get(SK_PUMPS, {}).items(), key=_pump_sort_key):
+            if v.get("hasSwitch", False) and not v.get("auto", False):
                 entities.append(
                     SpaSwitch(
                         coordinator,
@@ -62,7 +62,7 @@ async def async_setup_entry(
                 )
             )
 
-        for k, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
+        for k, _ in coordinator.state.get(SK_SLEEP_TIMERS, {}).items():
             entities.append(
                 SpaSwitch(
                     coordinator,

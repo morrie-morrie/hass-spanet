@@ -42,16 +42,18 @@ Keep the Home Assistant device page intentionally simple.
 - Pumps are exposed as switches
 - Blower is exposed as a switch
 - Lights are exposed primarily through the native `light` entity
+- Pumps are capability-driven:
+  - auto-capable pumps use selects
+  - binary pumps use switches
+- Schedules and stable settings should prefer native HA entities
 - Advanced behavior should prefer services over extra select/number entities where possible
 
 ### Advanced controls
 
 Prefer service-based control for advanced or clutter-prone actions:
 
-- pump mode such as `auto`
 - blower mode and blower speed
 - advanced light mode, colour, and light speed
-- sleep timer CRUD
 
 If a new feature can be represented either as a device-page entity or a service, prefer:
 - entity for common day-to-day control

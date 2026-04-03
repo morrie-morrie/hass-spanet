@@ -253,14 +253,16 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
     await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
     await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
+    pump_selects = [entity for entity in created_selects if entity._attr_name.startswith("Pump")]
     pump_switches = [entity for entity in created_switches if entity._attr_name.startswith("Pump")]
 
-    assert not any(entity._attr_name.startswith("Pump") for entity in created_selects)
-    assert [entity._attr_name for entity in pump_switches] == ["Pump 1", "Pump 2"]
+    assert [entity._attr_name for entity in pump_selects] == ["Pump 1"]
+    assert pump_selects[0].options == ["off", "auto", "on"]
+    assert [entity._attr_name for entity in pump_switches] == ["Pump 2"]
 
 
 @pytest.mark.asyncio
-async def test_pump_one_is_a_switch_even_when_auto_supported():
+async def test_pump_one_is_a_select_when_auto_supported():
     coordinator = _Coordinator(
         {
             const.SK_PUMPS: {
@@ -280,9 +282,9 @@ async def test_pump_one_is_a_switch_even_when_auto_supported():
     await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
     await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
-    assert not any(entity._attr_name == "Pump 1" for entity in created_selects)
-    pump_one = next(entity for entity in created_switches if entity._attr_name == "Pump 1")
-    assert pump_one.is_on is True
+    assert not any(entity._attr_name == "Pump 1" for entity in created_switches)
+    pump_one = next(entity for entity in created_selects if entity._attr_name == "Pump 1")
+    assert pump_one.current_option == "auto"
 
 
 @pytest.mark.asyncio

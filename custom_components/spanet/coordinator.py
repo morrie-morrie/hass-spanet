@@ -7,9 +7,9 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api_mappings import (
     LIGHT_ANIMATION_OPTIONS,
     OPERATION_MODE_OPTIONS,
+    PUMP_SELECT_OPTIONS,
     extract_time_string,
     heat_pump_from_api,
-    lock_mode_from_api,
     operation_mode_from_api,
     power_save_from_api,
 )
@@ -27,7 +27,6 @@ from .const import (
     SK_LIGHTS,
     SK_LIGHT_ANIMATION,
     SK_LIGHT_PROFILE,
-    SK_LOCK_MODE,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
     SK_PUMPS,
@@ -37,7 +36,6 @@ from .const import (
     SK_SETTEMP,
     SK_SLEEP_TIMERS,
     SK_SLEEPING,
-    SK_SUPPORT_MODE,
     SK_TIMEOUT,
     SK_WATERTEMP,
     SL_HEATING,
@@ -111,7 +109,10 @@ class Coordinator(DataUpdateCoordinator):
             raise
 
     def get_state_numeric(self, key: str, divisor=1):
-        value = self.get_state(key)
+        try:
+            value = self.get_state(key)
+        except Exception:
+            return None
         if value is None:
             return None
         return int(value) / divisor
@@ -125,10 +126,17 @@ class Coordinator(DataUpdateCoordinator):
     async def set_pump(self, key: str, state: str):
         pump = self.get_state(f"{SK_PUMPS}.{key}")
         normalized = str(state).lower()
+        if pump.get("auto", False):
+            if normalized not in PUMP_SELECT_OPTIONS:
+                logger.warning("Unsupported auto-capable pump state %s for pump %s", normalized, key)
+                return
+        elif normalized not in {"on", "off"}:
+            logger.warning("Unsupported binary pump state %s for pump %s", normalized, key)
+            return
         pump["state"] = normalized
         await self.spa.set_pump(pump["apiId"], normalized)
+        self.tasks[1].trigger(0)
         await self.async_request_refresh()
-        self.queue_refresh()
 
     async def set_lights(self, state: str):
         lights = self.get_state(SK_LIGHTS)
@@ -185,6 +193,7 @@ class Coordinator(DataUpdateCoordinator):
         lights = self.get_state(SK_LIGHTS)
         lights["colour"] = colour
         await self.spa.set_light_colour(lights["apiId"], colour)
+        self.queue_lights_refresh()
         await self.async_request_refresh()
 
     async def set_operation_mode(self, mode: str):
@@ -396,11 +405,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def set_lock_mode_switch(self, value: str):
-        mode = 1 if value == "on" else 0
-        self.state[SK_LOCK_MODE] = value
-        await self.spa.set_lock_mode(mode)
-        self.queue_settings_refresh()
-        await self.async_request_refresh()
+        return
 
     async def set_timeout(self, value: int):
         self.state[SK_TIMEOUT] = value
@@ -449,13 +454,18 @@ class Coordinator(DataUpdateCoordinator):
             if pump_id not in pumps:
                 pumps[pump_id] = {}
             pump = pumps[pump_id]
+            raw_state = str(p.get("pumpStatus", "off")).lower()
+            if raw_state == "auto":
+                normalized_state = "auto"
+            elif raw_state in {"on", "high", "low", "1"}:
+                normalized_state = "on"
+            else:
+                normalized_state = "off"
             pump["apiId"] = str(p["id"])
-            pump["auto"] = p.get("hasAuto", False)
+            pump["auto"] = bool(p.get("hasAuto", False))
             pump["speeds"] = int(p.get("pumpSpeed", 1))
-            pump["hasSwitch"] = p.get("canSwitchOn", False) and (
-                not p.get("hasAuto", False) or int(p.get("pumpSpeed", 1)) > 1
-            )
-            pump["state"] = str(p.get("pumpStatus", "off")).lower()
+            pump["hasSwitch"] = bool(p.get("canSwitchOn", False))
+            pump["state"] = normalized_state
         self.state[SK_PUMPS] = pumps
 
         blower_data = details.get("blower") or {}
@@ -477,20 +487,6 @@ class Coordinator(DataUpdateCoordinator):
     async def update_information(self):
         information_data = await self.spa.get_information()
         settings_summary = information_data.get("information", {}).get("settingsSummary", {})
-
-        operation_mode = self.fuzzy_find(OPERATION_MODE_OPTIONS, settings_summary.get("operationMode"))
-        self.state[SK_OPERATION_MODE] = operation_mode or "Unknown"
-
-        try:
-            power_save = settings_summary.get("powersaveTimer", {}).get("mode")
-            self.state[SK_POWER_SAVE] = power_save_from_api(power_save)
-        except AttributeError:
-            self.state[SK_POWER_SAVE] = "Unknown"
-
-        if self.config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
-            self.state[SK_HEAT_PUMP] = "Off"
-        else:
-            self.state[SK_HEAT_PUMP] = "Off"
 
         element_boost = settings_summary.get("hpElementBoost")
         is_supported = element_boost is not None
@@ -528,23 +524,15 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_FILTRATION_CYCLE] = int(filtration.get("inBetweenCycles", 0))
 
         try:
-            self.state[SK_LOCK_MODE] = lock_mode_from_api(await self.spa.get_lock_mode())
-        except (TypeError, ValueError):
-            self.state[SK_LOCK_MODE] = "off"
-
-        try:
             self.state[SK_TIMEOUT] = int(await self.spa.get_timeout())
         except (TypeError, ValueError):
-            self.state[SK_TIMEOUT] = 0
+            self.state[SK_TIMEOUT] = None
 
         sanitise_time = await self.spa.get_sanitise_time()
         self.state[SK_SANITISE_TIME] = extract_time_string(sanitise_time)
 
         sanitise_status = await self.spa.get_sanitise_status()
         self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
-
-        self.state[SK_DATE_TIME] = await self.spa.get_date_time()
-        self.state[SK_SUPPORT_MODE] = await self.spa.get_support_mode()
 
         try:
             sleep_timers = await self.spa.get_sleep_timer()

@@ -144,7 +144,6 @@ async def test_pump_binary_sensors_created_for_switch_pumps():
             const.SK_HEATER: 0,
             const.SK_SANITISE: 0,
             const.SK_SLEEPING: 0,
-            const.SK_SUPPORT_MODE: "off",
             const.SK_PUMPS: {
                 "1": {"hasSwitch": True, "state": "auto"},
                 "2": {"hasSwitch": True, "state": "off"},

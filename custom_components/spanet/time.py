@@ -26,12 +26,12 @@ async def async_setup_entry(
         entities.append(
             SpaConfigTime(
                 coordinator,
-                "Sanitise Time",
+                "Sanitise Start Time",
                 SK_SANITISE_TIME,
                 coordinator.set_sanitise_time,
             )
         )
-        for key, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
+        for key, _ in coordinator.state.get(SK_SLEEP_TIMERS, {}).items():
             entities.append(
                 SpaSleepTimerTime(
                     coordinator,

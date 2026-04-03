@@ -475,7 +475,6 @@ async def test_update_settings_prefers_authoritative_api_mode_endpoints():
 
     assert coordinator.state[const.SK_FILTRATION_RUNTIME] == 3
     assert coordinator.state[const.SK_FILTRATION_CYCLE] == 12
-    assert coordinator.state[const.SK_LOCK_MODE] == "on"
     assert coordinator.state[const.SK_POWER_SAVE] == "Low"
     assert coordinator.state[const.SK_OPERATION_MODE] == "Away"
     assert coordinator.state[const.SK_HEAT_PUMP] == "Off"

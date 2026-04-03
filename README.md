@@ -14,9 +14,9 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 
 - Climate control for spa set temperature
 - Water temperature, heater, sanitise, and sleeping sensors
-- Pump control as simple switch entities on the device page
-  - `Pump 1`
-  - `Pump 2`
+- Capability-driven pump control from `PumpsAndBlower/Get`
+  - auto-capable pumps are exposed as `select` entities: `off / auto / on`
+  - binary pumps are exposed as `switch` entities
 - Blower control as a simple switch entity on the device page
 - Native light entity for everyday light control
 - Settings entities for:
@@ -27,7 +27,7 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
   - Filtration Runtime
   - Filtration Cycle Gap
   - Timeout
-  - Sanitise Time
+  - Sanitise Start Time
   - Sleep Timers
 
 ## Configuration
@@ -50,8 +50,8 @@ This fork prefers native Home Assistant entities where the API contract is clear
 ### Pumps
 
 - Pumps are created from the live `PumpsAndBlower/Get` response
-- Pumps are exposed as `switch` entities on the device page
-- Advanced pump mode changes such as `auto` are exposed via services
+- Auto-capable pumps are exposed as `select` entities with `off / auto / on`
+- Binary pumps are exposed as `switch` entities
 - Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
 ### Blower
@@ -72,37 +72,22 @@ Domain: `spanet`
 - `set_light_mode`
 - `set_light_colour`
 - `set_light_speed`
-- `set_pump_mode`
 - `set_blower_mode`
 - `set_blower_speed`
-- `create_sleep_timer`
-- `update_sleep_timer`
-- `delete_sleep_timer`
-- `set_sanitise_status`
 
 These services are intended for automations, scripts, dashboard buttons, and manual calls from Developer Tools.
 
 ### Why services exist
 
-The device page is kept intentionally simple:
+The device page is kept intentionally simple for non-schedule advanced controls:
 
-- pumps are switches
+- pumps follow live capability
 - blower is a switch
 - light is a native light entity
 
-Advanced actions that would otherwise clutter the device page are exposed as services instead.
+Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
 
 ### Common service examples
-
-Pump 1 to auto mode:
-
-```yaml
-service: spanet.set_pump_mode
-data:
-  spa_id: "12345"
-  pump: 1
-  mode: auto
-```
 
 Blower to ramp mode:
 
@@ -149,23 +134,7 @@ data:
   speed: 3
 ```
 
-Trigger sanitise:
-
-```yaml
-service: spanet.set_sanitise_status
-data:
-  spa_id: "12345"
-  on: true
-```
-
 ### Service reference
-
-`set_pump_mode`
-- Use for advanced pump modes such as `auto`
-- Fields:
-  - `spa_id`
-  - `pump`
-  - `mode`: `off`, `on`, `auto`
 
 `set_blower_mode`
 - Use for `off`, `ramp`, or `variable`
@@ -196,22 +165,6 @@ data:
 - Fields:
   - `spa_id`
   - `speed`
-
-`set_sanitise_status`
-- Triggers sanitise when `on: true`
-- `on: false` is accepted for compatibility but ignored
-- Fields:
-  - `spa_id`
-  - `on`
-
-`create_sleep_timer`
-- Creates a sleep timer profile
-
-`update_sleep_timer`
-- Updates an existing sleep timer profile
-
-`delete_sleep_timer`
-- Deletes an existing sleep timer profile
 
 ## Notes
 
