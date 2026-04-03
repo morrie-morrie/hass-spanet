@@ -19,6 +19,8 @@ from .const import (
     SK_HEATER,
     SK_HEAT_PUMP,
     SK_LIGHTS,
+    SK_LIGHT_ANIMATION,
+    SK_LIGHT_PROFILE,
     SK_LOCK_MODE,
     SK_OPERATION_MODE,
     SK_OXY,
@@ -108,8 +110,9 @@ class Coordinator(DataUpdateCoordinator):
 
     async def set_pump(self, key: str, state: str):
         pump = self.get_state(f"{SK_PUMPS}.{key}")
-        pump["state"] = state
-        await self.spa.set_pump(pump["apiId"], state)
+        normalized = str(state).lower()
+        pump["state"] = normalized
+        await self.spa.set_pump(pump["apiId"], normalized)
         await self.async_request_refresh()
         self.queue_refresh()
 
@@ -137,6 +140,28 @@ class Coordinator(DataUpdateCoordinator):
         lights["mode"] = mode
         await self.spa.set_light_mode(lights["apiId"], mode)
         await self.async_request_refresh()
+
+    async def set_light_profile(self, profile: str):
+        if profile not in {"Single", "Animated"}:
+            return
+        if profile == "Single":
+            await self.set_light_mode("Single")
+            self.state[SK_LIGHT_PROFILE] = "Single"
+            self.state[SK_LIGHT_ANIMATION] = "None"
+            return
+
+        current_animation = self.state.get(SK_LIGHT_ANIMATION)
+        mode = current_animation if current_animation in {"Fade", "Step", "Party"} else "Fade"
+        await self.set_light_mode(mode)
+        self.state[SK_LIGHT_PROFILE] = "Animated"
+        self.state[SK_LIGHT_ANIMATION] = mode
+
+    async def set_light_animation(self, animation: str):
+        if animation not in {"Fade", "Step", "Party"}:
+            return
+        await self.set_light_mode(animation)
+        self.state[SK_LIGHT_PROFILE] = "Animated"
+        self.state[SK_LIGHT_ANIMATION] = animation
 
     async def set_light_colour(self, colour: str):
         lights = self.get_state(SK_LIGHTS)
@@ -298,14 +323,19 @@ class Coordinator(DataUpdateCoordinator):
 
     async def set_blower(self, value: str):
         blower = self.get_state(SK_BLOWER)
-        blower["state"] = value
-        await self.spa.set_blower(blower["apiId"], value, int(blower.get("speed", 0)))
+        normalized = str(value).lower()
+        blower["state"] = normalized
+        await self.spa.set_blower(blower["apiId"], normalized, int(blower.get("speed", 1)))
         await self.async_request_refresh()
 
     async def set_blower_speed(self, value: int):
         blower = self.get_state(SK_BLOWER)
-        blower["speed"] = value
-        await self.spa.set_blower(blower["apiId"], blower.get("state", "on"), value)
+        blower["speed"] = max(1, min(5, int(value)))
+        state = blower.get("state", "variable")
+        if state != "variable":
+            state = "variable"
+            blower["state"] = state
+        await self.spa.set_blower(blower["apiId"], state, blower["speed"])
         await self.async_request_refresh()
 
     async def set_filtration_runtime(self, value: int):
@@ -388,10 +418,18 @@ class Coordinator(DataUpdateCoordinator):
 
         blower_data = details.get("blower") or {}
         if blower_data:
+            raw_state = str(blower_data.get("blowerStatus", "off")).lower()
+            speed = int(blower_data.get("speed", 1) or 1)
+            if raw_state in {"auto", "ramp"}:
+                mapped_state = "ramp"
+            elif raw_state in {"on", "variable", "low", "high"}:
+                mapped_state = "variable"
+            else:
+                mapped_state = "off"
             self.state[SK_BLOWER] = {
                 "apiId": str(blower_data.get("id")),
-                "state": str(blower_data.get("blowerStatus", "off")).lower(),
-                "speed": int(blower_data.get("speed", 0)),
+                "state": mapped_state,
+                "speed": max(1, min(5, speed)),
             }
 
         oxy = details.get("oxy")
@@ -459,6 +497,13 @@ class Coordinator(DataUpdateCoordinator):
             "mode": light_details.get("mode", light_details.get("lightMode")),
             "colour": light_details.get("colour", light_details.get("lightColour")),
         }
+        mode = str(self.state[SK_LIGHTS].get("mode") or "")
+        if mode in {"Fade", "Step", "Party"}:
+            self.state[SK_LIGHT_PROFILE] = "Animated"
+            self.state[SK_LIGHT_ANIMATION] = mode
+        else:
+            self.state[SK_LIGHT_PROFILE] = "Single"
+            self.state[SK_LIGHT_ANIMATION] = "None"
 
     async def update_settings(self):
         filtration = await self.spa.get_filtration()

@@ -15,13 +15,18 @@ from .const import (
     SK_BLOWER,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
-    SK_LIGHTS,
     SK_LOCK_MODE,
     SK_PUMPS,
     SK_SANITISE_STATUS,
     SK_SLEEP_TIMERS,
 )
 from .entity import SpaEntity
+
+
+def _pump_display_name(pump_key: str) -> str:
+    if str(pump_key) == "1":
+        return "Pump A"
+    return f"Pump {pump_key}"
 
 
 async def async_setup_entry(
@@ -37,20 +42,11 @@ async def async_setup_entry(
                 entities.append(
                     SpaSwitch(
                         coordinator,
-                        f"Pump {k}",
+                        _pump_display_name(k),
                         f"{SK_PUMPS}.{k}.state",
                         partial(coordinator.set_pump, k),
                     )
                 )
-
-        entities.append(
-            SpaSwitch(
-                coordinator,
-                "Lights",
-                f"{SK_LIGHTS}.state",
-                coordinator.set_lights,
-            )
-        )
 
         if SK_BLOWER in coordinator.state:
             entities.append(

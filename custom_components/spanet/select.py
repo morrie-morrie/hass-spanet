@@ -19,6 +19,8 @@ from .const import (
     SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_HEAT_PUMP,
+    SK_LIGHT_ANIMATION,
+    SK_LIGHT_PROFILE,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
     SK_PUMPS,
@@ -27,16 +29,41 @@ from .const import (
 from .entity import SpaEntity
 
 
+def _pump_display_name(pump_key: str) -> str:
+    if str(pump_key) == "1":
+        return "Pump A"
+    return f"Pump {pump_key}"
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
-    pump_options = ["off", "auto", "low", "high"]
-    blower_options = ["off", "on", "auto", "low", "high"]
+    pump_options_default = ["off", "on"]
+    blower_options = ["off", "ramp", "variable"]
     entities = []
 
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+        entities.append(
+            SpaSelect(
+                coordinator,
+                "Light Profile",
+                SK_LIGHT_PROFILE,
+                ["Single", "Animated"],
+                coordinator.set_light_profile,
+            )
+        )
+        entities.append(
+            SpaSelect(
+                coordinator,
+                "Light Animation",
+                SK_LIGHT_ANIMATION,
+                ["Fade", "Step", "Party", "None"],
+                coordinator.set_light_animation,
+            )
+        )
+
         entities.append(
             SpaSelect(
                 coordinator,
@@ -82,13 +109,16 @@ async def async_setup_entry(
             )
 
         for k, v in coordinator.get_state(SK_PUMPS).items():
-            if v["hasSwitch"] and v["speeds"] > 1:
+            if v["hasSwitch"]:
+                options = pump_options_default.copy()
+                if v.get("auto", False):
+                    options = ["off", "auto", "on"]
                 entities.append(
                     SpaSelect(
                         coordinator,
-                        f"Pump {k}",
+                        _pump_display_name(k),
                         f"{SK_PUMPS}.{k}.state",
-                        pump_options,
+                        options,
                         partial(coordinator.set_pump, k),
                     )
                 )

@@ -65,6 +65,7 @@ class SpaPool:
         return await self.client.get(f"/PumpsAndBlower/Get/{self.id}")
 
     async def set_pump(self, pump_id: str, state: str):
+        state = str(state).lower()
         mode_map = {"on": 1, "off": 2, "auto": 3, "low": 1, "high": 1}
         speed_map = {"on": 0, "off": 0, "auto": 0, "low": 1, "high": 2}
 
@@ -83,7 +84,16 @@ class SpaPool:
         )
 
     async def set_blower(self, blower_id: str, state: str, speed: int):
-        mode_map = {"on": 1, "off": 2, "auto": 3, "low": 1, "high": 1}
+        state = str(state).lower()
+        mode_map = {
+            "on": 1,
+            "off": 2,
+            "auto": 3,
+            "low": 1,
+            "high": 1,
+            "ramp": 3,
+            "variable": 1,
+        }
         mode_id = mode_map.get(state)
         if mode_id is None:
             logger.warning("Unknown blower state %s", state)
@@ -94,7 +104,7 @@ class SpaPool:
             {
                 "deviceId": int(self.id),
                 "modeId": mode_id,
-                "speed": int(speed),
+                "speed": max(1, min(5, int(speed))),
             },
         )
 

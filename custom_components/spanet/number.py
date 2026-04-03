@@ -35,8 +35,8 @@ async def async_setup_entry(
                     "Light Brightness",
                     f"{SK_LIGHTS}.brightness",
                     coordinator.set_light_brightness,
-                    minimum=0,
-                    maximum=100,
+                    minimum=1,
+                    maximum=5,
                     step=1,
                 ),
                 SpaNumber(
@@ -44,8 +44,8 @@ async def async_setup_entry(
                     "Light Speed",
                     f"{SK_LIGHTS}.speed",
                     coordinator.set_light_speed,
-                    minimum=0,
-                    maximum=100,
+                    minimum=1,
+                    maximum=5,
                     step=1,
                 ),
                 SpaNumber(
@@ -94,8 +94,8 @@ async def async_setup_entry(
                     "Blower Speed",
                     f"{SK_BLOWER}.speed",
                     coordinator.set_blower_speed,
-                    minimum=0,
-                    maximum=100,
+                    minimum=1,
+                    maximum=5,
                     step=1,
                 )
             )
