@@ -94,3 +94,33 @@ Domain: `spanet`
 - Source: [morrie-morrie/hass-spanet](https://github.com/morrie-morrie/hass-spanet)
 - Original project: [lloydw/hass-spanet](https://github.com/lloydw/hass-spanet)
 - Issues: [morrie-morrie/hass-spanet/issues](https://github.com/morrie-morrie/hass-spanet/issues)
+
+## Release flow
+
+HACS shows commit hashes when the repository has no version tags or GitHub releases. This fork now includes a release workflow that publishes GitHub releases from semantic version tags.
+
+### Normal release
+
+1. Update `custom_components/spanet/manifest.json` with the new version
+2. Commit the change to `main`
+3. Push a matching Git tag, for example `v1.1.15`
+4. GitHub Actions publishes the GitHub release automatically
+
+Example:
+
+```powershell
+git add custom_components/spanet/manifest.json README.md
+git commit -m "Release 1.1.15"
+git push origin main
+git tag v1.1.15
+git push origin v1.1.15
+```
+
+### Manual release
+
+You can also run the `Release` workflow manually in GitHub Actions and provide:
+
+- `tag`: the release tag, for example `v1.1.15`
+- `target`: the git ref to release from, default `main`
+
+The workflow validates that the tag matches `manifest.json` before creating the release.
