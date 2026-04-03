@@ -259,6 +259,8 @@ def test_api_mapping_helpers_cover_known_contract_values():
     assert api_mappings.power_save_from_api(3) == "High"
     assert api_mappings.heat_pump_from_api(4) == "Off"
     assert api_mappings.lock_mode_from_api(1) == "on"
+    assert api_mappings.extract_time_string({"time": "08:30:00"}) == "08:30"
+    assert api_mappings.extract_time_string({"startTime": "2026-04-03T22:00:00"}) == "22:00"
 
 
 @pytest.mark.asyncio

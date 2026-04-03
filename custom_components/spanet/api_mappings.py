@@ -83,3 +83,42 @@ def lock_mode_from_api(value: Any) -> str:
     if api_value is None:
         return "off"
     return LOCK_MODE_LABELS_BY_API.get(api_value, "off")
+
+
+def extract_time_string(value: Any) -> str | None:
+    """Extract an HH:MM-style value from common SpaNET API payload shapes."""
+    if value is None:
+        return None
+
+    if isinstance(value, dict):
+        for key in ("time", "startTime", "endTime", "dateTime", "value"):
+            nested = extract_time_string(value.get(key))
+            if nested:
+                return nested
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if "T" in text:
+        time_part = text.split("T", 1)[1]
+        text = time_part.rstrip("Z")
+
+    if " " in text:
+        text = text.split(" ", 1)[0]
+
+    pieces = text.split(":")
+    if len(pieces) < 2:
+        return None
+
+    try:
+        hour = int(pieces[0])
+        minute = int(pieces[1])
+    except (TypeError, ValueError):
+        return None
+
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+
+    return f"{hour:02d}:{minute:02d}"

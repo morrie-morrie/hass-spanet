@@ -7,6 +7,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api_mappings import (
     LIGHT_ANIMATION_OPTIONS,
     OPERATION_MODE_OPTIONS,
+    extract_time_string,
     heat_pump_from_api,
     lock_mode_from_api,
     operation_mode_from_api,
@@ -480,8 +481,8 @@ class Coordinator(DataUpdateCoordinator):
                 "number": t.get("timerNumber"),
                 "apiId": t.get("id"),
                 "name": t.get("timerName"),
-                "startTime": t.get("startTime"),
-                "endTime": t.get("endTime"),
+                "startTime": extract_time_string(t.get("startTime")),
+                "endTime": extract_time_string(t.get("endTime")),
                 "daysHex": t.get("daysHex"),
                 "dayProfile": self._timer_day_profile_from_hex(str(t.get("daysHex", ""))),
                 "isEnabled": bool(t.get("isEnabled")),
@@ -525,7 +526,7 @@ class Coordinator(DataUpdateCoordinator):
             self.state[SK_TIMEOUT] = 0
 
         sanitise_time = await self.spa.get_sanitise_time()
-        self.state[SK_SANITISE_TIME] = sanitise_time
+        self.state[SK_SANITISE_TIME] = extract_time_string(sanitise_time)
 
         sanitise_status = await self.spa.get_sanitise_status()
         self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"

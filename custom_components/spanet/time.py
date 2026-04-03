@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .api_mappings import extract_time_string
 from .const import DOMAIN, SK_SANITISE_TIME, SK_SLEEP_TIMERS
 from .entity import SpaEntity
 
@@ -67,10 +68,11 @@ class SpaSleepTimerTime(SpaEntity, TimeEntity):
             value = self.coordinator.get_state(self._state_key)
         except Exception:
             return None
-        if not value:
+        parsed = extract_time_string(value)
+        if not parsed:
             return None
         try:
-            hour, minute = value.split(":")[0:2]
+            hour, minute = parsed.split(":")[0:2]
             return time(hour=int(hour), minute=int(minute))
         except (ValueError, TypeError):
             return None
@@ -94,10 +96,11 @@ class SpaConfigTime(SpaEntity, TimeEntity):
             value = self.coordinator.get_state(self._state_key)
         except Exception:
             return None
-        if not value:
+        parsed = extract_time_string(value)
+        if not parsed:
             return None
         try:
-            hour, minute = str(value).split(":")[0:2]
+            hour, minute = parsed.split(":")[0:2]
             return time(hour=int(hour), minute=int(minute))
         except (ValueError, TypeError):
             return None
