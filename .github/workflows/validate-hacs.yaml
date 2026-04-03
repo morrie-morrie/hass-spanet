@@ -1,5 +1,8 @@
 name: Validate HACS
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   workflow_dispatch:
 
@@ -7,7 +10,7 @@ jobs:
   validate-hacs:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v5"
       - name: Hassfest validation
         uses: "home-assistant/actions/hassfest@master"
       - name: HACS validation
