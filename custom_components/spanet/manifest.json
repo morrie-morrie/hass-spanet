@@ -1,7 +1,7 @@
 {
   "domain": "spanet",
   "name": "SpaNET",
-  "codeowners": ["@lloydw"],
+  "codeowners": ["@morrie-morrie"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/morrie-morrie/hass-spanet",
