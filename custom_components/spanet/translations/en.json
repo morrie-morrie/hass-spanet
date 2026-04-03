@@ -63,6 +63,18 @@
         "set_blower_speed": {
             "name": "Set Blower Speed",
             "description": "Set blower speed from 1 to 5."
+        },
+        "create_sleep_timer": {
+            "name": "Create Sleep Timer",
+            "description": "Create a sleep timer."
+        },
+        "update_sleep_timer": {
+            "name": "Update Sleep Timer",
+            "description": "Update an existing sleep timer."
+        },
+        "delete_sleep_timer": {
+            "name": "Delete Sleep Timer",
+            "description": "Delete an existing sleep timer."
         }
     }
 }

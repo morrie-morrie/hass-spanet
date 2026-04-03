@@ -74,6 +74,9 @@ Domain: `spanet`
 - `set_light_speed`
 - `set_blower_mode`
 - `set_blower_speed`
+- `create_sleep_timer`
+- `update_sleep_timer`
+- `delete_sleep_timer`
 
 These services are intended for automations, scripts, dashboard buttons, and manual calls from Developer Tools.
 
@@ -86,6 +89,7 @@ The device page is kept intentionally simple for non-schedule advanced controls:
 - light is a native light entity
 
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
+Sleep timer CRUD services remain available because the API supports timer lifecycle operations beyond the fixed entity model.
 
 ### Common service examples
 
@@ -134,6 +138,20 @@ data:
   speed: 3
 ```
 
+Create Sleep Timer:
+
+```yaml
+service: spanet.create_sleep_timer
+data:
+  spa_id: "12345"
+  timer_number: 2
+  timer_name: "Timer 2"
+  start_time: "22:00"
+  end_time: "07:00"
+  days_hex: "60"
+  is_enabled: true
+```
+
 ### Service reference
 
 `set_blower_mode`
@@ -165,6 +183,15 @@ data:
 - Fields:
   - `spa_id`
   - `speed`
+
+`create_sleep_timer`
+- Creates a sleep timer profile
+
+`update_sleep_timer`
+- Updates an existing sleep timer profile
+
+`delete_sleep_timer`
+- Deletes an existing sleep timer profile
 
 ## Notes
 
