@@ -39,12 +39,11 @@ When making design tradeoffs, prefer the option that better aligns with Home Ass
 
 Keep the Home Assistant device page intentionally simple.
 
-- Pumps are exposed as switches
-- Blower is exposed as a switch
-- Lights are exposed primarily through the native `light` entity
 - Pumps are capability-driven:
   - auto-capable pumps use selects
   - binary pumps use switches
+- Blower is exposed as a switch
+- Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
 - Advanced behavior should prefer services over extra select/number entities where possible
 
@@ -91,8 +90,8 @@ Do not decouple these unless explicitly requested.
 Sanitise is treated as an action-oriented behavior, not a true persistent switch.
 
 - `Run Sanitise` is a button
-- `set_sanitise_status` service exists for compatibility
-- `on: false` requests are intentionally ignored
+- `Sanitise Active` is a binary sensor sourced from live dashboard state
+- Do not expose sanitise as a toggleable switch
 
 ### Lock Mode
 
@@ -116,8 +115,10 @@ Do not reintroduce it without a clear requirement and validated behavior.
   - pumps, blower, sleep timers, element boost
 - `custom_components/spanet/light.py`
   - native light entity
+- `custom_components/spanet/binary_sensor.py`
+  - heater, sanitise active, sleeping, and pump run-state sensors
 - `custom_components/spanet/sensor.py`
-  - status sensors, including pump sensors
+  - temperature sensors
 - `custom_components/spanet/api_mappings.py`
   - centralized state/mode mappings
 

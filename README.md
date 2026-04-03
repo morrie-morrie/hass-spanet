@@ -13,7 +13,8 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 ## Features
 
 - Climate control for spa set temperature
-- Water temperature, heater, sanitise, and sleeping sensors
+- Water temperature and set temperature sensors
+- Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
   - auto-capable pumps are exposed as `select` entities: `off / auto / on`
   - binary pumps are exposed as `switch` entities
@@ -41,7 +42,7 @@ All spas on the account are discovered and added under the one config entry.
 - `Enable Heat Pump`
   - Enables the Heat Pump mode entity
   - Enables the Element Boost switch
-  - If disabled, Element Boost is not added
+  - If disabled, Heat Pump and Element Boost are not added
 
 ## Entity model
 
@@ -64,6 +65,13 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - `Light` is exposed as a native HA `light` entity
 - Advanced light mode, colour, and speed control are exposed via services
+
+### Sanitise
+
+- `Sanitise Active` is exposed as a binary sensor from the live dashboard state
+- `Run Sanitise` is exposed as a button action
+- `Sanitise Start Time` is exposed as a native `time` entity
+- Sanitise is not modeled as a switch
 
 ## Services
 
@@ -220,25 +228,24 @@ Example:
 
 ```powershell
 git add custom_components/spanet/manifest.json README.md
-git commit -m "Release 1.1.20"
+git commit -m "Release 1.2.5"
 git push origin main
 ```
 
-The workflow derives the tag from `manifest.json`, for example version `1.1.20` becomes tag `v1.1.20`.
+The workflow derives the tag from `manifest.json`, for example version `1.2.5` becomes tag `v1.2.5`.
 
 ### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
-- `tag`: the release tag, for example `v1.1.15`
-- `tag`: the release tag, for example `v1.1.20`
+- `tag`: the release tag, for example `v1.2.5`
 - `target`: the git ref to release from, default `main`
 
 Or push a matching tag directly:
 
 ```powershell
-git tag v1.1.20
-git push origin v1.1.20
+git tag v1.2.5
+git push origin v1.2.5
 ```
 
 The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.
