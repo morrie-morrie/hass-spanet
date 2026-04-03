@@ -293,6 +293,9 @@ class Coordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def set_sanitiser(self, value: str):
+        if str(value).lower() != "on":
+            logger.info("Ignoring sanitise '%s' request for spa %s; sanitise is a trigger action", value, self.spa_id)
+            return
         on = value == "on"
         try:
             await self.spa.set_sanitise_status(on)
@@ -302,6 +305,9 @@ class Coordinator(DataUpdateCoordinator):
             logger.warning("Failed to set sanitise status for spa %s: %s", self.spa_id, exc)
             return
         await self.async_request_refresh()
+
+    async def trigger_sanitise(self):
+        await self.set_sanitiser("on")
 
     async def set_sanitise_time(self, value: str):
         await self.spa.set_sanitise_time(value)

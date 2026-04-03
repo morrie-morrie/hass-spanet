@@ -67,7 +67,7 @@
         },
         "set_sanitise_status": {
             "name": "Set Sanitise Status",
-            "description": "Enable or disable sanitise."
+            "description": "Trigger sanitise. Off requests are ignored for compatibility."
         }
     }
 }

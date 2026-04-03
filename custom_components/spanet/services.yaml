@@ -192,7 +192,7 @@ delete_sleep_timer:
 
 set_sanitise_status:
   name: Set Sanitise Status
-  description: Enable or disable sanitise mode.
+  description: Trigger sanitise. Off requests are ignored for compatibility.
   fields:
     spa_id:
       required: true

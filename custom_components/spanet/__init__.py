@@ -20,6 +20,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.CLIMATE,
     Platform.SWITCH,
+    Platform.BUTTON,
     Platform.SELECT,
     Platform.NUMBER,
     Platform.TIME,
@@ -101,6 +102,7 @@ async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: Con
     removed_name_suffixes_by_type = {
         "select.": {"LightProfile", "LightAnimation", "BlowerMode", "Pump1", "Pump2"},
         "number.": {"LightBrightness", "LightSpeed", "BlowerSpeed"},
+        "switch.": {"SanitiseStatus", "LockMode"},
     }
     for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
         if entry.platform != DOMAIN:
@@ -124,6 +126,8 @@ async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: Con
                     "_lightspeed",
                     "_blowermode",
                     "_blowerspeed",
+                    "_sanitisestatus",
+                    "_lockmode",
                 )
             ):
                 registry.async_remove(entry.entity_id)

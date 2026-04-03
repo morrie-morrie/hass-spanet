@@ -16,9 +16,7 @@ from .const import (
     SK_BLOWER,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
-    SK_LOCK_MODE,
     SK_PUMPS,
-    SK_SANITISE_STATUS,
     SK_SLEEP_TIMERS,
 )
 from .entity import SpaEntity
@@ -61,28 +59,6 @@ async def async_setup_entry(
                     "Blower",
                     f"{SK_BLOWER}.state",
                     coordinator.set_blower_switch,
-                )
-            )
-
-        if SK_SANITISE_STATUS in coordinator.state:
-            entities.append(
-                SpaSwitch(
-                    coordinator,
-                    "Sanitise Status",
-                    SK_SANITISE_STATUS,
-                    coordinator.set_sanitiser,
-                    entity_category=EntityCategory.CONFIG,
-                )
-            )
-
-        if SK_LOCK_MODE in coordinator.state:
-            entities.append(
-                SpaSwitch(
-                    coordinator,
-                    "Lock Mode",
-                    SK_LOCK_MODE,
-                    coordinator.set_lock_mode_switch,
-                    entity_category=EntityCategory.CONFIG,
                 )
             )
 
