@@ -15,7 +15,6 @@ from .const import (
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_LIGHTS,
-    SK_OXY,
     SK_PUMPS,
     SK_SANITISE_STATUS,
     SK_SLEEP_TIMERS,
@@ -44,9 +43,6 @@ async def async_setup_entry(
 
         entities.append(SpaSwitch(coordinator, "Lights", f"{SK_LIGHTS}.state", coordinator.set_lights))
 
-        if SK_OXY in coordinator.state:
-            entities.append(SpaSwitch(coordinator, "Oxy", SK_OXY, coordinator.set_oxy))
-
         if SK_BLOWER in coordinator.state:
             entities.append(
                 SpaSwitch(
@@ -57,14 +53,15 @@ async def async_setup_entry(
                 )
             )
 
-        entities.append(
-            SpaSwitch(
-                coordinator,
-                "Sanitise Status",
-                SK_SANITISE_STATUS,
-                coordinator.set_sanitiser,
+        if SK_SANITISE_STATUS in coordinator.state:
+            entities.append(
+                SpaSwitch(
+                    coordinator,
+                    "Sanitise Status",
+                    SK_SANITISE_STATUS,
+                    coordinator.set_sanitiser,
+                )
             )
-        )
 
         for k, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
             entities.append(
@@ -112,7 +109,10 @@ class SpaSwitch(SpaEntity, SwitchEntity):
 
     @property
     def is_on(self):
-        value = self.coordinator.get_state(self._state_key)
+        try:
+            value = self.coordinator.get_state(self._state_key)
+        except Exception:
+            return None
         if value is None:
             return None
         if value in {"on", "auto", "high", "low"}:

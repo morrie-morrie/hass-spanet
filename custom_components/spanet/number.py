@@ -14,8 +14,6 @@ from .const import (
     SK_FILTRATION_CYCLE,
     SK_FILTRATION_RUNTIME,
     SK_LIGHTS,
-    SK_LOCK_MODE,
-    SK_TIMEOUT,
 )
 from .entity import SpaEntity
 
@@ -65,25 +63,6 @@ async def async_setup_entry(
                     coordinator.set_filtration_cycle,
                     minimum=0,
                     maximum=1440,
-                    step=1,
-                    native_unit=UnitOfTime.MINUTES,
-                ),
-                SpaNumber(
-                    coordinator,
-                    "Lock Mode",
-                    SK_LOCK_MODE,
-                    coordinator.set_lock_mode,
-                    minimum=0,
-                    maximum=4,
-                    step=1,
-                ),
-                SpaNumber(
-                    coordinator,
-                    "Timeout",
-                    SK_TIMEOUT,
-                    coordinator.set_timeout,
-                    minimum=0,
-                    maximum=240,
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
                 ),
