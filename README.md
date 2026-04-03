@@ -14,18 +14,11 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 
 - Climate control for spa set temperature
 - Water temperature, heater, sanitise, and sleeping sensors
-- Pump control driven by live spa capabilities
-  - `Pump 1`: `off / auto / on` when auto mode is supported
-  - binary fallback for pumps that only support `off / on`
-- Blower control
-  - `Blower Mode`: `off / ramp / variable`
-  - `Blower Speed`: `1-5` when blower mode is `variable`
-- Native light entity plus advanced light controls
-  - on/off
-  - brightness `1-5`
-  - profile: `Single` or `Animated`
-  - animation: `Fade`, `Step`, `Party`
-  - animation speed `1-5`
+- Pump control as simple switch entities on the device page
+  - `Pump 1`
+  - `Pump 2`
+- Blower control as a simple switch entity on the device page
+- Native light entity for everyday light control
 - Settings entities for:
   - Operation Mode
   - Power Save
@@ -57,20 +50,20 @@ This fork prefers native Home Assistant entities where the API contract is clear
 ### Pumps
 
 - Pumps are created from the live `PumpsAndBlower/Get` response
-- Auto-capable pumps are exposed as `select` entities
-- Binary-only pumps are exposed as `switch` entities
-- Duplicate pump entities are intentionally avoided
+- Pumps are exposed as `switch` entities on the device page
+- Advanced pump mode changes such as `auto` are exposed via services
+- Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
 ### Blower
 
-- No blower switch is created
-- Mode is handled with a `select`
-- Speed is handled with a `number`
+- `Blower` is exposed as a `switch` on the device page
+- Turning the blower on uses the integration's default active blower mode
+- Advanced blower mode and speed control are exposed via services
 
 ### Lights
 
 - `Light` is exposed as a native HA `light` entity
-- Advanced light controls are exposed as select/number entities and services
+- Advanced light mode, colour, and speed control are exposed via services
 
 ## Services
 
@@ -78,6 +71,10 @@ Domain: `spanet`
 
 - `set_light_mode`
 - `set_light_colour`
+- `set_light_speed`
+- `set_pump_mode`
+- `set_blower_mode`
+- `set_blower_speed`
 - `create_sleep_timer`
 - `update_sleep_timer`
 - `delete_sleep_timer`
@@ -110,24 +107,25 @@ Example:
 
 ```powershell
 git add custom_components/spanet/manifest.json README.md
-git commit -m "Release 1.1.15"
+git commit -m "Release 1.1.19"
 git push origin main
 ```
 
-The workflow derives the tag from `manifest.json`, for example version `1.1.15` becomes tag `v1.1.15`.
+The workflow derives the tag from `manifest.json`, for example version `1.1.19` becomes tag `v1.1.19`.
 
 ### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
 - `tag`: the release tag, for example `v1.1.15`
+- `tag`: the release tag, for example `v1.1.19`
 - `target`: the git ref to release from, default `main`
 
 Or push a matching tag directly:
 
 ```powershell
-git tag v1.1.15
-git push origin v1.1.15
+git tag v1.1.19
+git push origin v1.1.19
 ```
 
 The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.

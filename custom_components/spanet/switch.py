@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
+    SK_BLOWER,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_LOCK_MODE,
@@ -43,7 +44,7 @@ async def async_setup_entry(
 
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
-            if v.get("hasSwitch", False) and not v.get("auto", False):
+            if v.get("hasSwitch", False):
                 entities.append(
                     SpaSwitch(
                         coordinator,
@@ -52,6 +53,16 @@ async def async_setup_entry(
                         partial(coordinator.set_pump, k),
                     )
                 )
+
+        if SK_BLOWER in coordinator.state:
+            entities.append(
+                SpaSwitch(
+                    coordinator,
+                    "Blower",
+                    f"{SK_BLOWER}.state",
+                    coordinator.set_blower_switch,
+                )
+            )
 
         if SK_SANITISE_STATUS in coordinator.state:
             entities.append(
@@ -129,7 +140,7 @@ class SpaSwitch(SpaEntity, SwitchEntity):
             return None
         if value is None:
             return None
-        if value in {"on", "auto", "high", "low"}:
+        if value in {"on", "auto", "high", "low", "ramp", "variable"}:
             return True
         if value == "off":
             return False

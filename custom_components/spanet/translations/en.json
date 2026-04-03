@@ -37,6 +37,22 @@
             "name": "Set Light Colour",
             "description": "Set light colour using a raw colour string."
         },
+        "set_light_speed": {
+            "name": "Set Light Speed",
+            "description": "Set animated light speed from 1 to 5."
+        },
+        "set_pump_mode": {
+            "name": "Set Pump Mode",
+            "description": "Set pump mode. Use auto only when the spa supports it."
+        },
+        "set_blower_mode": {
+            "name": "Set Blower Mode",
+            "description": "Set blower mode."
+        },
+        "set_blower_speed": {
+            "name": "Set Blower Speed",
+            "description": "Set blower speed from 1 to 5."
+        },
         "create_sleep_timer": {
             "name": "Create Sleep Timer",
             "description": "Create a sleep timer."

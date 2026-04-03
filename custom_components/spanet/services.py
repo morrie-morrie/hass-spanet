@@ -9,6 +9,10 @@ from .const import DOMAIN
 
 SERVICE_SET_LIGHT_MODE = "set_light_mode"
 SERVICE_SET_LIGHT_COLOUR = "set_light_colour"
+SERVICE_SET_LIGHT_SPEED = "set_light_speed"
+SERVICE_SET_PUMP_MODE = "set_pump_mode"
+SERVICE_SET_BLOWER_MODE = "set_blower_mode"
+SERVICE_SET_BLOWER_SPEED = "set_blower_speed"
 SERVICE_CREATE_SLEEP_TIMER = "create_sleep_timer"
 SERVICE_UPDATE_SLEEP_TIMER = "update_sleep_timer"
 SERVICE_DELETE_SLEEP_TIMER = "delete_sleep_timer"
@@ -41,6 +45,30 @@ async def async_register_services(hass: HomeAssistant):
         if coordinator is None:
             raise ValueError(f"Spa id {call.data['spa_id']} not found")
         await coordinator.set_light_colour(call.data["colour"])
+
+    async def handle_set_light_speed(call: ServiceCall):
+        coordinator = _find_coordinator(hass, str(call.data["spa_id"]))
+        if coordinator is None:
+            raise ValueError(f"Spa id {call.data['spa_id']} not found")
+        await coordinator.set_light_speed(call.data["speed"])
+
+    async def handle_set_pump_mode(call: ServiceCall):
+        coordinator = _find_coordinator(hass, str(call.data["spa_id"]))
+        if coordinator is None:
+            raise ValueError(f"Spa id {call.data['spa_id']} not found")
+        await coordinator.set_pump(str(call.data["pump"]), call.data["mode"])
+
+    async def handle_set_blower_mode(call: ServiceCall):
+        coordinator = _find_coordinator(hass, str(call.data["spa_id"]))
+        if coordinator is None:
+            raise ValueError(f"Spa id {call.data['spa_id']} not found")
+        await coordinator.set_blower(call.data["mode"])
+
+    async def handle_set_blower_speed(call: ServiceCall):
+        coordinator = _find_coordinator(hass, str(call.data["spa_id"]))
+        if coordinator is None:
+            raise ValueError(f"Spa id {call.data['spa_id']} not found")
+        await coordinator.set_blower_speed(call.data["speed"])
 
     async def handle_create_sleep_timer(call: ServiceCall):
         coordinator = _find_coordinator(hass, str(call.data["spa_id"]))
@@ -97,6 +125,37 @@ async def async_register_services(hass: HomeAssistant):
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_SET_LIGHT_SPEED,
+        handle_set_light_speed,
+        schema=spa_id_required.extend({vol.Required("speed"): vol.All(int, vol.Range(min=1, max=5))}),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PUMP_MODE,
+        handle_set_pump_mode,
+        schema=spa_id_required.extend(
+            {
+                vol.Required("pump"): vol.Any(str, int),
+                vol.Required("mode"): vol.In(["off", "on", "auto"]),
+            }
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_BLOWER_MODE,
+        handle_set_blower_mode,
+        schema=spa_id_required.extend(
+            {vol.Required("mode"): vol.In(["off", "ramp", "variable"])}
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_BLOWER_SPEED,
+        handle_set_blower_speed,
+        schema=spa_id_required.extend({vol.Required("speed"): vol.All(int, vol.Range(min=1, max=5))}),
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_CREATE_SLEEP_TIMER,
         handle_create_sleep_timer,
         schema=spa_id_required.extend(
@@ -144,6 +203,10 @@ async def async_unregister_services(hass: HomeAssistant):
     for service_name in (
         SERVICE_SET_LIGHT_MODE,
         SERVICE_SET_LIGHT_COLOUR,
+        SERVICE_SET_LIGHT_SPEED,
+        SERVICE_SET_PUMP_MODE,
+        SERVICE_SET_BLOWER_MODE,
+        SERVICE_SET_BLOWER_SPEED,
         SERVICE_CREATE_SLEEP_TIMER,
         SERVICE_UPDATE_SLEEP_TIMER,
         SERVICE_DELETE_SLEEP_TIMER,

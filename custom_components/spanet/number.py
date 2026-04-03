@@ -11,12 +11,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    SK_BLOWER,
     SK_FILTRATION_CYCLE,
     SK_FILTRATION_RUNTIME,
-    SK_LIGHT_ANIMATION,
-    SK_LIGHT_PROFILE,
-    SK_LIGHTS,
     SK_TIMEOUT,
 )
 from .entity import SpaEntity
@@ -32,26 +28,6 @@ async def async_setup_entry(
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         entities.extend(
             [
-                SpaNumber(
-                    coordinator,
-                    "Light Brightness",
-                    f"{SK_LIGHTS}.brightness",
-                    coordinator.set_light_brightness,
-                    minimum=1,
-                    maximum=5,
-                    step=1,
-                ),
-                SpaNumber(
-                    coordinator,
-                    "Light Speed",
-                    f"{SK_LIGHTS}.speed",
-                    coordinator.set_light_speed,
-                    minimum=1,
-                    maximum=5,
-                    step=1,
-                    availability_callback=lambda c: c.state.get(SK_LIGHT_PROFILE) == "Animated"
-                    and c.state.get(SK_LIGHT_ANIMATION) != "None",
-                ),
                 SpaNumber(
                     coordinator,
                     "Filtration Runtime",
@@ -90,21 +66,6 @@ async def async_setup_entry(
                 ),
             ]
         )
-
-        if SK_BLOWER in coordinator.state:
-            entities.append(
-                SpaNumber(
-                    coordinator,
-                    "Blower Speed",
-                    f"{SK_BLOWER}.speed",
-                    coordinator.set_blower_speed,
-                    minimum=1,
-                    maximum=5,
-                    step=1,
-                    availability_callback=lambda c: c.state.get(SK_BLOWER, {}).get("state")
-                    == "variable",
-                )
-            )
 
     async_add_entity(entities)
     return True

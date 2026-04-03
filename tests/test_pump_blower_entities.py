@@ -168,6 +168,9 @@ class _Coordinator:
     async def set_blower(self, _value):
         return None
 
+    async def set_blower_switch(self, _value):
+        return None
+
     async def set_blower_speed(self, _value):
         return None
 
@@ -232,13 +235,11 @@ def _hass_and_entry(coordinator, options=None):
 async def test_pump_entities_follow_capabilities_without_duplicates():
     coordinator = _Coordinator(
         {
-            const.SK_LIGHT_PROFILE: "Single",
             const.SK_PUMPS: {
                 "1": {"hasSwitch": True, "auto": True, "speeds": 2, "state": "auto"},
                 "2": {"hasSwitch": True, "auto": False, "speeds": 1, "state": "off"},
             },
             const.SK_SLEEP_TIMERS: {},
-            const.SK_LIGHTS: {"brightness": 1, "speed": 1},
             const.SK_FILTRATION_RUNTIME: 0,
             const.SK_FILTRATION_CYCLE: 0,
             const.SK_TIMEOUT: 0,
@@ -252,24 +253,20 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
     await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
     await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
-    pump_selects = [entity for entity in created_selects if entity._attr_name.startswith("Pump")]
     pump_switches = [entity for entity in created_switches if entity._attr_name.startswith("Pump")]
 
-    assert [entity._attr_name for entity in pump_selects] == ["Pump 1"]
-    assert pump_selects[0].options == ["off", "auto", "on"]
-    assert [entity._attr_name for entity in pump_switches] == ["Pump 2"]
+    assert not any(entity._attr_name.startswith("Pump") for entity in created_selects)
+    assert [entity._attr_name for entity in pump_switches] == ["Pump 1", "Pump 2"]
 
 
 @pytest.mark.asyncio
-async def test_pump_one_degrades_to_binary_when_auto_not_supported():
+async def test_pump_one_is_a_switch_even_when_auto_supported():
     coordinator = _Coordinator(
         {
-            const.SK_LIGHT_PROFILE: "Single",
             const.SK_PUMPS: {
-                "1": {"hasSwitch": True, "auto": False, "speeds": 1, "state": "off"},
+                "1": {"hasSwitch": True, "auto": True, "speeds": 2, "state": "auto"},
             },
             const.SK_SLEEP_TIMERS: {},
-            const.SK_LIGHTS: {"brightness": 1, "speed": 1},
             const.SK_FILTRATION_RUNTIME: 0,
             const.SK_FILTRATION_CYCLE: 0,
             const.SK_TIMEOUT: 0,
@@ -284,19 +281,16 @@ async def test_pump_one_degrades_to_binary_when_auto_not_supported():
     await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
     assert not any(entity._attr_name == "Pump 1" for entity in created_selects)
-    assert [entity._attr_name for entity in created_switches if entity._attr_name == "Pump 1"] == [
-        "Pump 1"
-    ]
+    pump_one = next(entity for entity in created_switches if entity._attr_name == "Pump 1")
+    assert pump_one.is_on is True
 
 
 @pytest.mark.asyncio
-async def test_blower_speed_available_only_in_variable_mode():
+async def test_blower_is_switch_only():
     coordinator = _Coordinator(
         {
-            const.SK_LIGHT_PROFILE: "Single",
             const.SK_PUMPS: {},
             const.SK_SLEEP_TIMERS: {},
-            const.SK_LIGHTS: {"brightness": 1, "speed": 1},
             const.SK_FILTRATION_RUNTIME: 0,
             const.SK_FILTRATION_CYCLE: 0,
             const.SK_TIMEOUT: 0,
@@ -307,15 +301,13 @@ async def test_blower_speed_available_only_in_variable_mode():
 
     created_numbers = []
     created_selects = []
+    created_switches = []
 
     await number_module.async_setup_entry(hass, config_entry, created_numbers.extend)
     await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
+    await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
-    blower_speed = next(entity for entity in created_numbers if entity._attr_name == "Blower Speed")
-    blower_mode = next(entity for entity in created_selects if entity._attr_name == "Blower Mode")
-
-    assert blower_mode.options == ["off", "ramp", "variable"]
-    assert blower_speed.available is False
-
-    coordinator.state[const.SK_BLOWER]["state"] = "variable"
-    assert blower_speed.available is True
+    assert not any(entity._attr_name == "Blower Mode" for entity in created_selects)
+    assert not any(entity._attr_name == "Blower Speed" for entity in created_numbers)
+    blower_switch = next(entity for entity in created_switches if entity._attr_name == "Blower")
+    assert blower_switch.is_on is True

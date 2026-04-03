@@ -28,6 +28,77 @@ set_light_colour:
       selector:
         text:
 
+set_light_speed:
+  name: Set Light Speed
+  description: Set animated light speed from 1 to 5.
+  fields:
+    spa_id:
+      required: true
+      example: "12345"
+      selector:
+        text:
+    speed:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 5
+
+set_pump_mode:
+  name: Set Pump Mode
+  description: Set a pump mode. Use auto only on spas that support it.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    pump:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10
+    mode:
+      required: true
+      selector:
+        select:
+          options:
+            - off
+            - on
+            - auto
+
+set_blower_mode:
+  name: Set Blower Mode
+  description: Set blower mode.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    mode:
+      required: true
+      selector:
+        select:
+          options:
+            - off
+            - ramp
+            - variable
+
+set_blower_speed:
+  name: Set Blower Speed
+  description: Set blower speed from 1 to 5.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    speed:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 5
+
 create_sleep_timer:
   name: Create Sleep Timer
   description: Create a sleep timer profile.

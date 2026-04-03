@@ -98,8 +98,33 @@ async def _async_reenable_entities(hass: HomeAssistant, config_entry: ConfigEntr
 async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     """Remove stale SpaNET entities for platforms no longer exposed by the integration."""
     registry = er.async_get(hass)
+    removed_name_suffixes_by_type = {
+        "select.": {"LightProfile", "LightAnimation", "BlowerMode", "Pump1", "Pump2"},
+        "number.": {"LightBrightness", "LightSpeed", "BlowerSpeed"},
+    }
     for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
         if entry.platform != DOMAIN:
             continue
-        if entry.entity_id.startswith("datetime.") or str(entry.unique_id).startswith("datetime."):
+        unique_id = str(entry.unique_id or "")
+        entity_id = str(entry.entity_id or "")
+        if entry.entity_id.startswith("datetime.") or unique_id.startswith("datetime."):
             registry.async_remove(entry.entity_id)
+            continue
+        for prefix, suffixes in removed_name_suffixes_by_type.items():
+            if unique_id.startswith(prefix) and any(unique_id.endswith(f"_{suffix}") for suffix in suffixes):
+                registry.async_remove(entry.entity_id)
+                break
+        else:
+            if any(
+                fragment in entity_id
+                for fragment in (
+                    "_lightprofile",
+                    "_lightanimation",
+                    "_lightbrightness",
+                    "_lightspeed",
+                    "_blowermode",
+                    "_blowerspeed",
+                )
+            ):
+                registry.async_remove(entry.entity_id)
+            continue

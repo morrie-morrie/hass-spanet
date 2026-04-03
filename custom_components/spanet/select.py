@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
-
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -12,7 +10,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api_mappings import (
     HEAT_PUMP_OPTIONS,
-    LIGHT_ANIMATION_OPTIONS,
     OPERATION_MODE_OPTIONS,
     POWER_SAVE_OPTIONS,
 )
@@ -20,27 +17,12 @@ from .const import (
     DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
     SLEEP_TIMER_DAY_PROFILES,
-    SK_BLOWER,
     SK_HEAT_PUMP,
-    SK_LIGHT_ANIMATION,
-    SK_LIGHT_PROFILE,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
-    SK_PUMPS,
     SK_SLEEP_TIMERS,
 )
 from .entity import SpaEntity
-
-
-def _pump_display_name(pump_key: str) -> str:
-    return f"Pump {pump_key}"
-
-
-def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
-    key = str(item[0])
-    if key.isdigit():
-        return (0, f"{int(key):04d}")
-    return (1, key)
 
 
 async def async_setup_entry(
@@ -48,30 +30,9 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
-    blower_options = ["off", "ramp", "variable"]
     entities = []
 
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
-        entities.append(
-            SpaSelect(
-                coordinator,
-                "Light Profile",
-                SK_LIGHT_PROFILE,
-                ["Single", "Animated"],
-                coordinator.set_light_profile,
-            )
-        )
-        entities.append(
-            SpaSelect(
-                coordinator,
-                "Light Animation",
-                SK_LIGHT_ANIMATION,
-                LIGHT_ANIMATION_OPTIONS,
-                coordinator.set_light_animation,
-                availability_callback=lambda c: c.state.get(SK_LIGHT_PROFILE) == "Animated",
-            )
-        )
-
         entities.append(
             SpaSelect(
                 coordinator,
@@ -102,30 +63,6 @@ async def async_setup_entry(
                     HEAT_PUMP_OPTIONS,
                     coordinator.set_heat_pump,
                     entity_category=EntityCategory.CONFIG,
-                )
-            )
-
-        if SK_BLOWER in coordinator.state:
-            entities.append(
-                SpaSelect(
-                    coordinator,
-                    "Blower Mode",
-                    f"{SK_BLOWER}.state",
-                    blower_options,
-                    coordinator.set_blower,
-                )
-            )
-
-        for k, v in sorted(coordinator.get_state(SK_PUMPS).items(), key=_pump_sort_key):
-            if not v.get("hasSwitch", False) or not v.get("auto", False):
-                continue
-            entities.append(
-                SpaSelect(
-                    coordinator,
-                    _pump_display_name(k),
-                    f"{SK_PUMPS}.{k}.state",
-                    ["off", "auto", "on"],
-                    partial(coordinator.set_pump, k),
                 )
             )
 

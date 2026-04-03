@@ -335,6 +335,10 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_blower(blower["apiId"], normalized, int(blower.get("speed", 1)))
         await self.async_request_refresh()
 
+    async def set_blower_switch(self, value: str):
+        target_state = "off" if str(value).lower() == "off" else "variable"
+        await self.set_blower(target_state)
+
     async def set_blower_speed(self, value: int):
         blower = self.get_state(SK_BLOWER)
         blower["speed"] = max(1, min(5, int(value)))
