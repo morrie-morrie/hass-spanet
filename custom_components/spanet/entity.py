@@ -17,6 +17,7 @@ class SpaEntity(CoordinatorEntity):
         )
         self._attr_name = name
         self._attr_has_entity_name = True
+        self._attr_entity_registry_enabled_default = True
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.spa_id)},
