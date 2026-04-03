@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.components.number import NumberEntity
+from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
@@ -58,6 +58,7 @@ async def async_setup_entry(
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
                     entity_category=EntityCategory.CONFIG,
+                    mode=NumberMode.BOX,
                 ),
                 SpaNumber(
                     coordinator,
@@ -69,6 +70,7 @@ async def async_setup_entry(
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
                     entity_category=EntityCategory.CONFIG,
+                    mode=NumberMode.BOX,
                 ),
                 SpaNumber(
                     coordinator,
@@ -80,6 +82,7 @@ async def async_setup_entry(
                     step=1,
                     native_unit=UnitOfTime.MINUTES,
                     entity_category=EntityCategory.CONFIG,
+                    mode=NumberMode.BOX,
                 ),
             ]
         )
@@ -115,6 +118,7 @@ class SpaNumber(SpaEntity, NumberEntity):
         step: float,
         native_unit: str | None = None,
         entity_category: EntityCategory | None = None,
+        mode: NumberMode | None = None,
     ):
         super().__init__(coordinator, "number", name)
         self._state_key = state_key
@@ -124,6 +128,7 @@ class SpaNumber(SpaEntity, NumberEntity):
         self._attr_native_step = step
         self._attr_native_unit_of_measurement = native_unit
         self._attr_entity_category = entity_category
+        self._attr_mode = mode or NumberMode.SLIDER
 
     @property
     def native_value(self):

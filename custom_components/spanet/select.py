@@ -16,11 +16,13 @@ from .const import (
     OPERATION_MODES,
     OPT_ENABLE_HEAT_PUMP,
     POWER_SAVE,
+    SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_HEAT_PUMP,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
     SK_PUMPS,
+    SK_SLEEP_TIMERS,
 )
 from .entity import SpaEntity
 
@@ -90,6 +92,18 @@ async def async_setup_entry(
                         partial(coordinator.set_pump, k),
                     )
                 )
+
+        for k, _ in coordinator.get_state(SK_SLEEP_TIMERS).items():
+            entities.append(
+                SpaSelect(
+                    coordinator,
+                    f"Sleep Timer {k} Days",
+                    f"{SK_SLEEP_TIMERS}.{k}.dayProfile",
+                    [*list(SLEEP_TIMER_DAY_PROFILES.keys()), "Custom"],
+                    partial(coordinator.set_sleep_timer_day_profile, k),
+                    entity_category=EntityCategory.CONFIG,
+                )
+            )
 
     async_add_entity(entities)
     return True

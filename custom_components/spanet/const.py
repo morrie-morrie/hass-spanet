@@ -37,3 +37,9 @@ HEAT_PUMP = ["Auto", "Heat", "Cool", "Off"]
 SANITISER = ["Off", "On"]
 
 OPT_ENABLE_HEAT_PUMP = "enable_heat_pump"
+
+SLEEP_TIMER_DAY_PROFILES = {
+    "Every Day": "7F",
+    "Week Days": "1F",
+    "Weekends": "60",
+}

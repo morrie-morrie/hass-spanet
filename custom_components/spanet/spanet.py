@@ -212,7 +212,22 @@ class SpaPool:
         return "Sanitise" in statuses
 
     async def set_sanitise_status(self, on: bool):
-        return await self.client.put(f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {})
+        attempts = [
+            (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {}),
+            (f"/Settings/SanitiseStatus/{self.id}?on={1 if on else 0}", {}),
+            (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on))}", {}),
+            (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {"on": bool(on)}),
+        ]
+        last_error = None
+        for path, payload in attempts:
+            try:
+                return await self.client.put(path, payload)
+            except SpaNetApiError as exc:
+                last_error = exc
+                continue
+        if last_error is not None:
+            raise last_error
+        return None
 
     async def get_light_details(self):
         return await self.client.get(f"/Lights/GetLightDetails/{self.id}")

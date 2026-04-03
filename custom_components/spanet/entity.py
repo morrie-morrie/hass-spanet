@@ -15,7 +15,8 @@ class SpaEntity(CoordinatorEntity):
         self._attr_unique_id = (
             f"{entity_type}.{self._build_entity_id(coordinator.spa_id + '_' + name)}"
         )
-        self._attr_name = f"{coordinator.spa_name} {name}"
+        self._attr_name = name
+        self._attr_has_entity_name = True
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.spa_id)},

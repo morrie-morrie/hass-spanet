@@ -9,6 +9,7 @@ from .const import (
     OPERATION_MODES,
     OPT_ENABLE_HEAT_PUMP,
     POWER_SAVE,
+    SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_DATE_TIME,
     SK_ELEMENT_BOOST,
@@ -161,6 +162,50 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_sleep_timer_enabled(timer["apiId"], value == "on")
         await self.async_request_refresh()
 
+    async def _update_sleep_timer_fields(
+        self,
+        key: str,
+        *,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        days_hex: str | None = None,
+    ):
+        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        updated_start = start_time if start_time is not None else timer.get("startTime")
+        updated_end = end_time if end_time is not None else timer.get("endTime")
+        updated_days = days_hex if days_hex is not None else timer.get("daysHex")
+
+        await self.spa.update_sleep_timer(
+            timer_id=int(timer["apiId"]),
+            timer_number=int(timer["number"]),
+            timer_name=str(timer.get("name", f"Timer {key}")),
+            start_time=str(updated_start),
+            end_time=str(updated_end),
+            days_hex=str(updated_days),
+            is_enabled=bool(timer.get("isEnabled", timer.get("state") == "on")),
+        )
+
+        timer["startTime"] = str(updated_start)
+        timer["endTime"] = str(updated_end)
+        timer["daysHex"] = str(updated_days)
+        timer["dayProfile"] = self._timer_day_profile_from_hex(str(updated_days))
+        await self.async_request_refresh()
+
+    async def set_sleep_timer_day_profile(self, key: str, profile: str):
+        if profile == "Custom":
+            return
+        days_hex = SLEEP_TIMER_DAY_PROFILES.get(profile)
+        if days_hex is None:
+            logger.warning("Unknown sleep timer profile '%s' for timer %s", profile, key)
+            return
+        await self._update_sleep_timer_fields(key, days_hex=days_hex)
+
+    async def set_sleep_timer_on_time(self, key: str, value: str):
+        await self._update_sleep_timer_fields(key, start_time=value)
+
+    async def set_sleep_timer_off_time(self, key: str, value: str):
+        await self._update_sleep_timer_fields(key, end_time=value)
+
     async def create_sleep_timer(
         self,
         timer_number: int,
@@ -216,8 +261,13 @@ class Coordinator(DataUpdateCoordinator):
 
     async def set_sanitiser(self, value: str):
         on = value == "on"
-        await self.spa.set_sanitise_status(on)
-        self.state[SK_SANITISE_STATUS] = "on" if on else "off"
+        try:
+            await self.spa.set_sanitise_status(on)
+            sanitise_status = await self.spa.get_sanitise_status()
+            self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
+        except SpaNetApiError as exc:
+            logger.warning("Failed to set sanitise status for spa %s: %s", self.spa_id, exc)
+            return
         await self.async_request_refresh()
 
     async def set_sanitise_time(self, value: str):
@@ -391,6 +441,7 @@ class Coordinator(DataUpdateCoordinator):
                 "startTime": t.get("startTime"),
                 "endTime": t.get("endTime"),
                 "daysHex": t.get("daysHex"),
+                "dayProfile": self._timer_day_profile_from_hex(str(t.get("daysHex", ""))),
                 "isEnabled": bool(t.get("isEnabled")),
                 "state": "on" if t.get("isEnabled") else "off",
             }
@@ -448,3 +499,10 @@ class Coordinator(DataUpdateCoordinator):
             if m.lower().startswith(str(mode).lower()):
                 return m
         return None
+
+    @staticmethod
+    def _timer_day_profile_from_hex(days_hex: str) -> str:
+        for profile, value in SLEEP_TIMER_DAY_PROFILES.items():
+            if value.lower() == str(days_hex).lower():
+                return profile
+        return "Custom"
