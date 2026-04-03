@@ -1,0 +1,133 @@
+set_light_mode:
+  name: Set Light Mode
+  description: Set the light mode using a raw mode string supported by your spa controller.
+  fields:
+    spa_id:
+      required: true
+      example: "12345"
+      selector:
+        text:
+    mode:
+      required: true
+      example: rainbow
+      selector:
+        text:
+
+set_light_colour:
+  name: Set Light Colour
+  description: Set the light colour using a raw colour string supported by your spa controller.
+  fields:
+    spa_id:
+      required: true
+      example: "12345"
+      selector:
+        text:
+    colour:
+      required: true
+      example: blue
+      selector:
+        text:
+
+create_sleep_timer:
+  name: Create Sleep Timer
+  description: Create a sleep timer profile.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    timer_number:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10
+    timer_name:
+      required: true
+      selector:
+        text:
+    start_time:
+      required: true
+      selector:
+        text:
+    end_time:
+      required: true
+      selector:
+        text:
+    days_hex:
+      required: true
+      selector:
+        text:
+    is_enabled:
+      required: false
+      default: true
+      selector:
+        boolean:
+
+update_sleep_timer:
+  name: Update Sleep Timer
+  description: Update a sleep timer profile.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    timer_id:
+      required: true
+      selector:
+        number:
+          min: 1
+    timer_number:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10
+    timer_name:
+      required: true
+      selector:
+        text:
+    start_time:
+      required: true
+      selector:
+        text:
+    end_time:
+      required: true
+      selector:
+        text:
+    days_hex:
+      required: true
+      selector:
+        text:
+    is_enabled:
+      required: false
+      default: true
+      selector:
+        boolean:
+
+delete_sleep_timer:
+  name: Delete Sleep Timer
+  description: Delete a sleep timer profile by timer id.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    timer_id:
+      required: true
+      selector:
+        number:
+          min: 1
+
+set_sanitise_status:
+  name: Set Sanitise Status
+  description: Enable or disable sanitise mode.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    on:
+      required: true
+      selector:
+        boolean:

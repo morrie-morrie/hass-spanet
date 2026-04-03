@@ -1,68 +1,107 @@
-"""SpaNet Sensors"""
+"""SpaNET selects."""
+
 from __future__ import annotations
-import inspect
+
+from functools import partial
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-
-from .const import *
+from .const import (
+    DOMAIN,
+    HEAT_PUMP,
+    OPERATION_MODES,
+    OPT_ENABLE_HEAT_PUMP,
+    POWER_SAVE,
+    SK_BLOWER,
+    SK_HEAT_PUMP,
+    SK_OPERATION_MODE,
+    SK_POWER_SAVE,
+    SK_PUMPS,
+)
 from .entity import SpaEntity
 
-import logging
-logger = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
-    pumpOptions = ["off", "auto", "low", "high"]
-
+    pump_options = ["off", "auto", "low", "high"]
+    blower_options = ["off", "on", "auto", "low", "high"]
     entities = []
 
-    for coordinator in hass.data[DOMAIN]["spas"]:
-
-        entities.append(SpaSelect(coordinator, "Operation Mode", SK_OPERATION_MODE, OPERATION_MODES[1:], coordinator.set_operation_mode))
-        entities.append(SpaSelect(coordinator, "Power Save", SK_POWER_SAVE, POWER_SAVE[1:], coordinator.set_power_save))
+    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+        entities.append(
+            SpaSelect(
+                coordinator,
+                "Operation Mode",
+                SK_OPERATION_MODE,
+                OPERATION_MODES[1:],
+                coordinator.set_operation_mode,
+            )
+        )
+        entities.append(
+            SpaSelect(
+                coordinator,
+                "Power Save",
+                SK_POWER_SAVE,
+                POWER_SAVE[1:],
+                coordinator.set_power_save,
+            )
+        )
 
         if config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
-            entities.append(SpaSelect(coordinator, "Heat Pump", SK_HEAT_PUMP, HEAT_PUMP, coordinator.set_heat_pump))
+            entities.append(
+                SpaSelect(coordinator, "Heat Pump", SK_HEAT_PUMP, HEAT_PUMP, coordinator.set_heat_pump)
+            )
+
+        if SK_BLOWER in coordinator.state:
+            entities.append(
+                SpaSelect(
+                    coordinator,
+                    "Blower Mode",
+                    f"{SK_BLOWER}.state",
+                    blower_options,
+                    coordinator.set_blower,
+                )
+            )
 
         for k, v in coordinator.get_state(SK_PUMPS).items():
             if v["hasSwitch"] and v["speeds"] > 1:
-                entities.append(SpaSelect(coordinator, f"Pump {k}", f"pumps.{k}", pumpOptions, coordinator.set_pump))
+                entities.append(
+                    SpaSelect(
+                        coordinator,
+                        f"Pump {k}",
+                        f"{SK_PUMPS}.{k}.state",
+                        pump_options,
+                        partial(coordinator.set_pump, k),
+                    )
+                )
 
     async_add_entity(entities)
+    return True
 
 
 class SpaSelect(SpaEntity, SelectEntity):
-    """A selector"""
+    """A selector."""
 
-    def __init__(self, coordinator, name, state_key, options, setter, sub_key=None) -> None:
+    def __init__(self, coordinator, name, state_key, options, setter) -> None:
         super().__init__(coordinator, "select", name)
         self.hass = coordinator.hass
         self._state_key = state_key
         self._options = options
-        self._sub_key = sub_key
-
-        sig = inspect.signature(setter)
-
         self._setter = setter
-        self._setter_num_parameters = len(sig.parameters)
 
     @property
     def current_option(self):
-        return self.coordinator.get_state(self._state_key, self._sub_key)
+        return self.coordinator.get_state(self._state_key)
 
     @property
     def options(self):
         return self._options
 
     async def async_select_option(self, option):
-        if self._setter_num_parameters == 1:
-            await self._setter(option)
-        elif self._setter_num_parameters == 2:
-            await self._setter(self._state_key, option)
+        await self._setter(option)

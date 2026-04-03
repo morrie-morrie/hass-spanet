@@ -27,5 +27,31 @@
                 }
             }
         }
+    },
+    "services": {
+        "set_light_mode": {
+            "name": "Set Light Mode",
+            "description": "Set light mode using a raw mode string."
+        },
+        "set_light_colour": {
+            "name": "Set Light Colour",
+            "description": "Set light colour using a raw colour string."
+        },
+        "create_sleep_timer": {
+            "name": "Create Sleep Timer",
+            "description": "Create a sleep timer."
+        },
+        "update_sleep_timer": {
+            "name": "Update Sleep Timer",
+            "description": "Update an existing sleep timer."
+        },
+        "delete_sleep_timer": {
+            "name": "Delete Sleep Timer",
+            "description": "Delete an existing sleep timer."
+        },
+        "set_sanitise_status": {
+            "name": "Set Sanitise Status",
+            "description": "Enable or disable sanitise."
+        }
     }
 }

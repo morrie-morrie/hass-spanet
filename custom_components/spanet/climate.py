@@ -25,7 +25,7 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN]["spas"]:
+    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         entities += [
             SpaClimate(coordinator),
         ]

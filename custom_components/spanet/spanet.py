@@ -1,36 +1,39 @@
-""" SpaNet API
+"""SpaNET API client."""
 
-Based on https://github.com/BlaT2512/spanet-api/issues/4
-"""
-import logging
 import json
-import jwt
+import logging
 import time
+
+import jwt
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://app.spanet.net.au/api"
 
+
 class SpaNetException(Exception):
-    """Base SpaNet Exception"""
+    """Base SpaNet Exception."""
 
 
 class SpaNetAuthFailed(SpaNetException):
-    """SpaNet authentication failed"""
+    """SpaNet authentication failed."""
 
 
 class SpaNetPoolUnknown(SpaNetException):
-    """SpaPool not found"""
+    """SpaPool not found."""
 
 
 class SpaNetApiError(SpaNetException):
-    """SpaNet api error"""
+    """SpaNet API error."""
+
     def __init__(self, response, body):
         self.response = response
         super().__init__(f"API Error {response.status}: {body}")
 
+
 class SpaNetResponseError(SpaNetException):
-    """SpaNet response error"""
+    """SpaNet response error."""
+
     def __init__(self, response, message):
         self.response = response
         super().__init__(message)
@@ -40,7 +43,6 @@ class SpaPool:
     def __init__(self, config, client):
         self.config = config
         self.client = client
-        self.pumps = {}
 
     @property
     def id(self):
@@ -51,81 +53,235 @@ class SpaPool:
         return self.config["name"]
 
     async def get_dashboard(self):
-        return await self.client.get("/Dashboard/" + self.id)
-
-    async def get_information(self):
-        return await self.client.get("/Information/" + self.id)
-
-    async def get_pumps(self):
-        return await self.client.get("/PumpsAndBlower/Get/" + self.id)
-
-    async def set_pump(self, pump_id:str, state:str):
-        modeId = 0
-        if state == "on":
-            modeId = 1
-        elif state == "off":
-            modeId = 2
-        else:
-            logger.warn(f"Unknown modeId for pump state {state}")
-            return
-        return await self.client.put(f"/PumpsAndBlower/SetPump/" + pump_id, {
-            "deviceId": self.id,
-            "modeId": modeId,
-            "pumpVariableSpeed": 0
-        })
+        return await self.client.get(f"/Dashboard/{self.id}")
 
     async def set_temperature(self, temp: int):
-        return await self.client.put("/Dashboard/" + self.config["id"], {"temperature": temp})
+        return await self.client.put(f"/Dashboard/{self.id}", {"temperature": temp})
+
+    async def get_information(self):
+        return await self.client.get(f"/Information/{self.id}")
+
+    async def get_pumps(self):
+        return await self.client.get(f"/PumpsAndBlower/Get/{self.id}")
+
+    async def set_pump(self, pump_id: str, state: str):
+        mode_map = {"on": 1, "off": 2, "auto": 3, "low": 1, "high": 1}
+        speed_map = {"on": 0, "off": 0, "auto": 0, "low": 1, "high": 2}
+
+        mode_id = mode_map.get(state)
+        if mode_id is None:
+            logger.warning("Unknown modeId for pump state %s", state)
+            return None
+
+        return await self.client.put(
+            f"/PumpsAndBlower/SetPump/{pump_id}",
+            {
+                "deviceId": int(self.id),
+                "modeId": mode_id,
+                "pumpVariableSpeed": speed_map.get(state, 0),
+            },
+        )
+
+    async def set_blower(self, blower_id: str, state: str, speed: int):
+        mode_map = {"on": 1, "off": 2, "auto": 3, "low": 1, "high": 1}
+        mode_id = mode_map.get(state)
+        if mode_id is None:
+            logger.warning("Unknown blower state %s", state)
+            return None
+
+        return await self.client.put(
+            f"/PumpsAndBlower/SetBlower/{blower_id}",
+            {
+                "deviceId": int(self.id),
+                "modeId": mode_id,
+                "speed": int(speed),
+            },
+        )
+
+    async def set_oxy(self, on: bool):
+        return await self.client.put(
+            f"/PumpsAndBlower/SetOxy/{self.id}",
+            {"oxy": bool(on)},
+        )
 
     async def get_operation_mode(self):
-        return await self.client.get("/Settings/OperationMode/" + self.id)
+        return await self.client.get(f"/Settings/OperationMode/{self.id}")
 
     async def set_operation_mode(self, mode: int):
-        return await self.client.put("/Settings/OperationMode/" + self.id, { "mode": mode })
+        return await self.client.put(f"/Settings/OperationMode/{self.id}", {"mode": mode})
 
     async def get_power_save(self):
-        return await self.client.get("/Settings/PowerSave/" + self.id)
+        return await self.client.get(f"/Settings/PowerSave/{self.id}")
 
     async def set_power_save(self, mode: int):
-        return await self.client.put("/Settings/PowerSave/" + self.id, { "mode": mode })
+        return await self.client.put(
+            f"/Settings/PowerSave/{self.id}",
+            {"mode": mode, "startTime": "00:00", "endTime": "00:00"},
+        )
 
-    async def get_sleep_timer(self, index:int):
-        return await self.client.get("/SleepTimers/" + self.id)
+    async def get_sleep_timer(self):
+        return await self.client.get(f"/SleepTimers/{self.id}")
 
-    async def set_sleep_timer(self, timer_id: int, timer_number: int, enabled: int):
-        return await self.client.put("/SleepTimers/" + str(timer_id), { "deviceId": self.id, "timerNumber": timer_number, "enabled": enabled == 1 })
+    async def set_sleep_timer_enabled(self, timer_id: int, enabled: bool):
+        timer = await self.client.get(f"/SleepTimers/{self.id}")
+        match = next((t for t in timer if int(t.get("id")) == int(timer_id)), None)
+        if match is None:
+            raise SpaNetException(f"Sleep timer {timer_id} not found")
+        return await self.update_sleep_timer(
+            timer_id=int(timer_id),
+            timer_number=int(match.get("timerNumber")),
+            timer_name=str(match.get("timerName")),
+            start_time=str(match.get("startTime")),
+            end_time=str(match.get("endTime")),
+            days_hex=str(match.get("daysHex")),
+            is_enabled=enabled,
+        )
+
+    async def create_sleep_timer(
+        self,
+        timer_number: int,
+        timer_name: str,
+        start_time: str,
+        end_time: str,
+        days_hex: str,
+        is_enabled: bool,
+    ):
+        return await self.client.post(
+            "/SleepTimers",
+            {
+                "deviceId": int(self.id),
+                "timerNumber": int(timer_number),
+                "timerName": timer_name,
+                "startTime": start_time,
+                "endTime": end_time,
+                "daysHex": days_hex,
+                "isEnabled": bool(is_enabled),
+            },
+        )
+
+    async def update_sleep_timer(
+        self,
+        timer_id: int,
+        timer_number: int,
+        timer_name: str,
+        start_time: str,
+        end_time: str,
+        days_hex: str,
+        is_enabled: bool,
+    ):
+        return await self.client.put(
+            f"/SleepTimers/{timer_id}",
+            {
+                "deviceId": int(self.id),
+                "timerNumber": int(timer_number),
+                "timerName": timer_name,
+                "startTime": start_time,
+                "endTime": end_time,
+                "daysHex": days_hex,
+                "isEnabled": bool(is_enabled),
+            },
+        )
+
+    async def delete_sleep_timer(self, timer_id: int):
+        return await self.client.delete(f"/SleepTimers/{timer_id}")
+
+    async def get_heat_pump(self):
+        return await self.client.get(f"/Settings/HeatPumpMode/{self.id}")
 
     async def set_heat_pump(self, mode: int):
-        return await self.client.put("/Settings/SetHeatPumpMode/" + self.id, { "mode": mode + 1 })
-    
-    async def set_sanitise(self, mode: int):
-        return await self.client.put("/Settings/Sanitise/" + self.id, { "mode": mode + 1 })
+        return await self.client.put(
+            f"/Settings/SetHeatPumpMode/{self.id}",
+            {"mode": mode + 1, "svElementBoost": False},
+        )
 
-    async def set_element_boost(self, on: int):
-        return await self.client.put("/Settings/SetElementBoost/" + self.id, { "svElementBoost": on == 1 })
+    async def set_element_boost(self, on: bool):
+        return await self.client.put(
+            f"/Settings/SetElementBoost/{self.id}",
+            {"svElementBoost": bool(on)},
+        )
+
+    async def get_sanitise_time(self):
+        return await self.client.get(f"/Settings/Sanitise/{self.id}")
+
+    async def set_sanitise_time(self, value: str):
+        return await self.client.put(f"/Settings/Sanitise/{self.id}", {"time": value})
+
+    async def get_sanitise_status(self):
+        data = await self.client.get(f"/Dashboard/{self.id}")
+        statuses = [s.split(" ")[0] for s in data.get("statusList", [])]
+        return "Sanitise" in statuses
+
+    async def set_sanitise_status(self, on: bool):
+        return await self.client.put(f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {})
 
     async def get_light_details(self):
-        return await self.client.get("/Lights/GetLightDetails/" + self.id)
+        return await self.client.get(f"/Lights/GetLightDetails/{self.id}")
 
-    async def set_light_status(self, light_id: int, on: int):
-        return await self.client.put("/Lights/SetLightStatus/" + str(light_id), { "deviceId": self.id, "on": on == 1 })
+    async def set_light_status(self, light_id: int, on: bool):
+        return await self.client.put(
+            f"/Lights/SetLightStatus/{int(light_id)}",
+            {"deviceId": int(self.id), "on": bool(on)},
+        )
+
+    async def set_light_mode(self, light_id: int, mode: str):
+        return await self.client.put(
+            f"/Lights/SetLightMode/{int(light_id)}",
+            {"deviceId": int(self.id), "mode": mode},
+        )
+
+    async def set_light_colour(self, light_id: int, colour: str):
+        return await self.client.put(
+            f"/Lights/SetLightColour/{int(light_id)}",
+            {"deviceId": int(self.id), "colour": colour},
+        )
+
+    async def set_light_brightness(self, light_id: int, brightness: int):
+        return await self.client.put(
+            f"/Lights/SetLightBrightness/{int(light_id)}",
+            {"deviceId": int(self.id), "brightness": int(brightness)},
+        )
+
+    async def set_light_speed(self, light_id: int, speed: int):
+        return await self.client.put(
+            f"/Lights/SetLightSpeed/{int(light_id)}",
+            {"deviceId": int(self.id), "speed": int(speed)},
+        )
+
+    async def get_filtration(self):
+        return await self.client.get(f"/Settings/Filtration/{self.id}")
+
+    async def set_filtration(self, total_runtime: int, in_between_cycles: int):
+        return await self.client.put(
+            f"/Settings/Filtration/{self.id}",
+            {"totalRuntime": int(total_runtime), "inBetweenCycles": int(in_between_cycles)},
+        )
+
+    async def get_lock_mode(self):
+        return await self.client.get(f"/Settings/Lock/{self.id}")
+
+    async def set_lock_mode(self, lock_mode: int):
+        return await self.client.put(f"/Settings/Lock/{self.id}", {"lockMode": int(lock_mode)})
+
+    async def get_timeout(self):
+        return await self.client.get(f"/Settings/Timeout/{self.id}")
+
+    async def set_timeout(self, timeout: int):
+        return await self.client.put(f"/Settings/Timeout/{self.id}", {"timeout": int(timeout)})
 
 
 class SpaNet:
     def __init__(self, aio_session):
         self.session = aio_session
-        self.spa_configs = {}
-        self.spa_sockets = {}
-        self.session_info = None
+        self.spa_configs = []
         self.client = None
-        self.auth_token = {}
+        self.token_source = None
 
     async def authenticate(self, email, password, device_id):
         login_params = {
             "email": email,
             "password": password,
             "userDeviceId": device_id,
-            "language": "en_AU"
+            "language": "en_AU",
         }
 
         client = HttpClient(self.session)
@@ -133,39 +289,31 @@ class SpaNet:
             login_data = await client.post("/Login/Authenticate", login_params)
             if "access_token" not in login_data:
                 raise SpaNetAuthFailed()
-        except Exception as e:
-            raise SpaNetAuthFailed(e)
+        except Exception as exc:
+            raise SpaNetAuthFailed(exc) from exc
 
         self.token_source = TokenSource(client, login_data, device_id)
         self.client = HttpClient(self.session, self.token_source)
         device_data = await self.client.get("/Devices")
 
-        spa_configs = []
-        for config in device_data["devices"]:
-            spa_configs.append(
-                {
-                    "id": str(config["id"]),
-                    "name": config["name"],
-                    "macAddress": config["macAddress"],
-                }
-            )
-        self.spa_configs = spa_configs
+        self.spa_configs = [
+            {
+                "id": str(config["id"]),
+                "name": config["name"],
+                "macAddress": config["macAddress"],
+            }
+            for config in device_data["devices"]
+        ]
 
     def get_available_spas(self):
-        """Get a list of spas"""
         return self.spa_configs
 
     async def get_spa(self, spa_id):
-        """Get the named spa"""
-
-        spa_config = next(
-            (spa for spa in self.spa_configs if str(spa["id"]) == spa_id),
-            None,
-        )
+        spa_config = next((spa for spa in self.spa_configs if str(spa["id"]) == spa_id), None)
         if not spa_config:
             raise SpaNetPoolUnknown()
-
         return SpaPool(spa_config, self.client)
+
 
 class HttpClient:
     def __init__(self, session, token_source=None):
@@ -173,11 +321,23 @@ class HttpClient:
         self.token_source = token_source
 
     async def post(self, path, payload):
-        response = await self.session.post(BASE_URL + path, data=json.dumps(payload), headers=await self.build_headers())
+        response = await self.session.post(
+            BASE_URL + path,
+            data=json.dumps(payload),
+            headers=await self.build_headers(),
+        )
         return await self.check_response(response)
 
     async def put(self, path, payload):
-        response = await self.session.put(BASE_URL + path, data=json.dumps(payload), headers=await self.build_headers())
+        response = await self.session.put(
+            BASE_URL + path,
+            data=json.dumps(payload),
+            headers=await self.build_headers(),
+        )
+        return await self.check_response(response)
+
+    async def delete(self, path):
+        response = await self.session.delete(BASE_URL + path, headers=await self.build_headers())
         return await self.check_response(response)
 
     async def get(self, path):
@@ -189,7 +349,7 @@ class HttpClient:
             "User-Agent": "SpaNET/5 CFNetwork/1498.700.2 Darwin/23.6.0",
             "Content-Type": "application/json",
         }
-        if self.token_source != None:
+        if self.token_source is not None:
             headers["Authorization"] = "Bearer " + (await self.token_source.token())
         return headers
 
@@ -198,21 +358,24 @@ class HttpClient:
             await self.raise_api_error(response)
 
         is_json = response.headers.get("Content-Type", "").startswith("application/json")
-
         if not is_json and requires_json:
             await self.raise_api_error(response)
 
         if is_json:
             data = await response.json()
-            if not isinstance(data, dict):
-                raise SpaNetResponseError(f"Request to {response.url} received unexpected {type(data).__name__} response: {data}")
-            return data
+            if isinstance(data, (dict, list, int, float, str, bool)) or data is None:
+                return data
+            raise SpaNetResponseError(
+                response,
+                f"Request to {response.url} received unexpected {type(data).__name__} response: {data}",
+            )
 
         return await response.text()
 
     async def raise_api_error(self, response):
         body = await response.text()
         raise SpaNetApiError(response, body)
+
 
 class TokenSource:
     def __init__(self, client, token, device_id):
@@ -221,20 +384,26 @@ class TokenSource:
         self.update(token)
 
     def update(self, token):
-        decoded = jwt.decode(token["access_token"], options={"verify_signature": False}, algorithms=["HS256"])
+        decoded = jwt.decode(
+            token["access_token"],
+            options={"verify_signature": False},
+            algorithms=["HS256"],
+        )
         self.token_data.update(token)
         self.token_data["expires_at"] = decoded["exp"]
 
     async def token(self):
-        expire_threshold = int(time.time()) - 60
+        expire_threshold = int(time.time()) + 60
         if self.token_data["expires_at"] > expire_threshold:
             return self.token_data["access_token"]
 
-        response = await self.client.post("/OAuth/Token", {
-            "refreshToken": self.token_data["refresh_token"],
-            "userDeviceId": self.token_data["device_id"]
-        })
-
+        response = await self.client.post(
+            "/OAuth/Token",
+            {
+                "refreshToken": self.token_data["refresh_token"],
+                "userDeviceId": self.token_data["device_id"],
+            },
+        )
         self.update(response)
-        logger.debug(f"Token refreshed {self.token_data}")
+        logger.debug("Token refreshed")
         return self.token_data["access_token"]

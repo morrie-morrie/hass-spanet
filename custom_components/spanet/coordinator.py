@@ -1,21 +1,48 @@
 import logging
 from datetime import timedelta
+
 import async_timeout
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .const import (
+    HEAT_PUMP,
+    OPERATION_MODES,
+    OPT_ENABLE_HEAT_PUMP,
+    POWER_SAVE,
+    SK_BLOWER,
+    SK_ELEMENT_BOOST,
+    SK_FILTRATION_CYCLE,
+    SK_FILTRATION_RUNTIME,
+    SK_HEATER,
+    SK_HEAT_PUMP,
+    SK_LIGHTS,
+    SK_LOCK_MODE,
+    SK_OPERATION_MODE,
+    SK_OXY,
+    SK_POWER_SAVE,
+    SK_PUMPS,
+    SK_SANITISE,
+    SK_SANITISE_STATUS,
+    SK_SANITISE_TIME,
+    SK_SETTEMP,
+    SK_SLEEP_TIMERS,
+    SK_SLEEPING,
+    SK_TIMEOUT,
+    SK_WATERTEMP,
+    SL_HEATING,
+    SL_SANITISE,
+    SL_SLEEPING,
 )
-from .const import *
-from .spanet import SpaNetApiError
 from .scheduler import Scheduler
+from .spanet import SpaNetApiError
 
 logger = logging.getLogger(__name__)
 
+
 class Coordinator(DataUpdateCoordinator):
-    """My custom coordinator."""
+    """SpaNET state coordinator."""
 
     def __init__(self, hass, spanet, spa_config, config_entry):
-        """Initialize my coordinator."""
         super().__init__(
             hass,
             logger,
@@ -27,14 +54,15 @@ class Coordinator(DataUpdateCoordinator):
         self.config_entry = config_entry
         self.state = {}
         self.spa = None
+        self.device = None
 
         self.scheduler = Scheduler()
-
         self.tasks = [
             self.scheduler.add_task(120, self.update_dashboard),
             self.scheduler.add_task(300, self.update_pumps),
             self.scheduler.add_task(1200, self.update_information),
-            self.scheduler.add_task(1200, self.update_lights)
+            self.scheduler.add_task(300, self.update_lights),
+            self.scheduler.add_task(600, self.update_settings),
         ]
 
     @property
@@ -50,14 +78,14 @@ class Coordinator(DataUpdateCoordinator):
 
     def get_state(self, key: str, sub_key=None):
         obj = self.state
-        path = key.split('.')
+        path = key.split(".")
         if sub_key is not None:
             path.append(sub_key)
         try:
             for p in path:
                 obj = obj[p]
             return obj
-        except (KeyError, IndexError) as exc:
+        except (KeyError, IndexError, TypeError) as exc:
             logger.error("Failed to load data for status key %s", key, exc_info=exc)
             logger.error("Status: %s", self.state)
             raise
@@ -71,7 +99,6 @@ class Coordinator(DataUpdateCoordinator):
     async def set_temperature(self, temp: int):
         self.state[SK_SETTEMP] = temp
         await self.spa.set_temperature(temp)
-        logger.debug(f"SET TEMP: {temp} -> {self.state}")
         await self.async_request_refresh()
         self.queue_refresh()
 
@@ -79,109 +106,189 @@ class Coordinator(DataUpdateCoordinator):
         pump = self.get_state(f"{SK_PUMPS}.{key}")
         pump["state"] = state
         await self.spa.set_pump(pump["apiId"], state)
-        logger.debug(f"SET PUMP {key}: {state} -> {self.state}")
         await self.async_request_refresh()
         self.queue_refresh()
 
     async def set_lights(self, state: str):
-        lights = self.get_state(f"{SK_LIGHTS}")
+        lights = self.get_state(SK_LIGHTS)
         lights["state"] = state
-        await self.spa.set_light_status(lights["apiId"], 1 if state == "on" else 0)
-        logger.debug(f"SET LIGHTS: {state} -> {self.state}")
+        await self.spa.set_light_status(lights["apiId"], state == "on")
         await self.async_request_refresh()
         self.queue_refresh()
 
-    async def set_operation_mode(self, mode: str):
-        modeIndex = OPERATION_MODES.index(mode)
-        if modeIndex < 0:
-            logger.error(f"Unknown operation mode: {mode}")
-            return
+    async def set_light_brightness(self, value: int):
+        lights = self.get_state(SK_LIGHTS)
+        lights["brightness"] = value
+        await self.spa.set_light_brightness(lights["apiId"], value)
+        await self.async_request_refresh()
 
-        await self.spa.set_operation_mode(modeIndex)
+    async def set_light_speed(self, value: int):
+        lights = self.get_state(SK_LIGHTS)
+        lights["speed"] = value
+        await self.spa.set_light_speed(lights["apiId"], value)
+        await self.async_request_refresh()
+
+    async def set_light_mode(self, mode: str):
+        lights = self.get_state(SK_LIGHTS)
+        lights["mode"] = mode
+        await self.spa.set_light_mode(lights["apiId"], mode)
+        await self.async_request_refresh()
+
+    async def set_light_colour(self, colour: str):
+        lights = self.get_state(SK_LIGHTS)
+        lights["colour"] = colour
+        await self.spa.set_light_colour(lights["apiId"], colour)
+        await self.async_request_refresh()
+
+    async def set_operation_mode(self, mode: str):
+        mode_index = OPERATION_MODES.index(mode)
+        await self.spa.set_operation_mode(mode_index)
         self.state[SK_OPERATION_MODE] = mode
-        logger.debug(f"SET OPERATION MODE: {mode} -> {self.state}")
         await self.async_request_refresh()
 
     async def set_power_save(self, mode: str):
-        modeIndex = POWER_SAVE.index(mode)
-        if modeIndex < 0:
-            logger.error(f"Unknown power save: {mode}")
-            return
-
-        await self.spa.set_power_save(modeIndex)
+        mode_index = POWER_SAVE.index(mode)
+        await self.spa.set_power_save(mode_index)
         self.state[SK_POWER_SAVE] = mode
-        logger.debug(f"SET POWER SAVE: {mode} -> {self.state}")
         await self.async_request_refresh()
 
     async def set_sleep_timer(self, key: str, value: str):
         timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
         timer["state"] = value
-        await self.spa.set_sleep_timer(timer["apiId"], timer['number'], value == "on")
-        logger.debug(f"SET SLEEP TIMER {key}: {value} -> {self.state}")
+        await self.spa.set_sleep_timer_enabled(timer["apiId"], value == "on")
+        await self.async_request_refresh()
+
+    async def create_sleep_timer(
+        self,
+        timer_number: int,
+        timer_name: str,
+        start_time: str,
+        end_time: str,
+        days_hex: str,
+        is_enabled: bool,
+    ):
+        await self.spa.create_sleep_timer(
+            timer_number=timer_number,
+            timer_name=timer_name,
+            start_time=start_time,
+            end_time=end_time,
+            days_hex=days_hex,
+            is_enabled=is_enabled,
+        )
+        self.tasks[2].trigger(0)
+        await self.async_request_refresh()
+
+    async def update_sleep_timer(
+        self,
+        timer_id: int,
+        timer_number: int,
+        timer_name: str,
+        start_time: str,
+        end_time: str,
+        days_hex: str,
+        is_enabled: bool,
+    ):
+        await self.spa.update_sleep_timer(
+            timer_id=timer_id,
+            timer_number=timer_number,
+            timer_name=timer_name,
+            start_time=start_time,
+            end_time=end_time,
+            days_hex=days_hex,
+            is_enabled=is_enabled,
+        )
+        self.tasks[2].trigger(0)
+        await self.async_request_refresh()
+
+    async def delete_sleep_timer(self, timer_id: int):
+        await self.spa.delete_sleep_timer(timer_id)
+        self.tasks[2].trigger(0)
         await self.async_request_refresh()
 
     async def set_heat_pump(self, mode: str):
-        modeIndex = HEAT_PUMP.index(mode)
-        if modeIndex < 0:
-            logger.error(f"Unknown heat pump: {mode}")
-            return
-
-        await self.spa.set_heat_pump(modeIndex)
+        mode_index = HEAT_PUMP.index(mode)
+        await self.spa.set_heat_pump(mode_index)
         self.state[SK_HEAT_PUMP] = mode
-        logger.debug(f"SET HEAT PUMP: {mode} -> {self.state}")
         await self.async_request_refresh()
 
-async def set_sanitiser(self, mode: str):
-        modeIndex = SK_SANITISE.index(mode)
-        if modeIndex < 0:
-            logger.error(f"Unknown sanitiser: {mode}")
-            return
-
-        await self.spa.set_sanisiser(modeIndex)
-        self.state[SK_SANITISE] = mode
-        logger.debug(f"SET Sanitiser: {mode} -> {self.state}")
+    async def set_sanitiser(self, value: str):
+        on = value == "on"
+        await self.spa.set_sanitise_status(on)
+        self.state[SK_SANITISE_STATUS] = "on" if on else "off"
         await self.async_request_refresh()
 
+    async def set_sanitise_time(self, value: str):
+        await self.spa.set_sanitise_time(value)
+        self.state[SK_SANITISE_TIME] = value
+        await self.async_request_refresh()
 
-async def set_element_boost(self, value: str):
-        await self.spa.set_element_boost(1 if value == "on" else 0)
+    async def set_element_boost(self, value: str):
+        on = value == "on"
+        await self.spa.set_element_boost(on)
         self.state[SK_ELEMENT_BOOST] = value
-        logger.debug(f"SET ELEMENT BOOST: {value} -> {self.state}")
         await self.async_request_refresh()
 
-async def _async_update_data(self):
-        """Fetch data from API endpoint.
+    async def set_oxy(self, value: str):
+        on = value == "on"
+        await self.spa.set_oxy(on)
+        self.state[SK_OXY] = "on" if on else "off"
+        await self.async_request_refresh()
 
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
+    async def set_blower(self, value: str):
+        blower = self.get_state(SK_BLOWER)
+        blower["state"] = value
+        await self.spa.set_blower(blower["apiId"], value, int(blower.get("speed", 0)))
+        await self.async_request_refresh()
+
+    async def set_blower_speed(self, value: int):
+        blower = self.get_state(SK_BLOWER)
+        blower["speed"] = value
+        await self.spa.set_blower(blower["apiId"], blower.get("state", "on"), value)
+        await self.async_request_refresh()
+
+    async def set_filtration_runtime(self, value: int):
+        current_cycle = int(self.state.get(SK_FILTRATION_CYCLE, 0))
+        self.state[SK_FILTRATION_RUNTIME] = value
+        await self.spa.set_filtration(total_runtime=value, in_between_cycles=current_cycle)
+        await self.async_request_refresh()
+
+    async def set_filtration_cycle(self, value: int):
+        current_runtime = int(self.state.get(SK_FILTRATION_RUNTIME, 0))
+        self.state[SK_FILTRATION_CYCLE] = value
+        await self.spa.set_filtration(total_runtime=current_runtime, in_between_cycles=value)
+        await self.async_request_refresh()
+
+    async def set_lock_mode(self, value: int):
+        self.state[SK_LOCK_MODE] = value
+        await self.spa.set_lock_mode(value)
+        await self.async_request_refresh()
+
+    async def set_timeout(self, value: int):
+        self.state[SK_TIMEOUT] = value
+        await self.spa.set_timeout(value)
+        await self.async_request_refresh()
+
+    async def _async_update_data(self):
         try:
             if not self.spa:
                 self.spa = await self.spanet.get_spa(self.spa_id)
             async with async_timeout.timeout(10):
                 await self.refresh_state()
-
         except SpaNetApiError as exc:
-            logger.error(f"API Error: {exc}")
+            logger.error("API Error: %s", exc)
             raise UpdateFailed("Failed updating spanet") from exc
 
-async def refresh_state(self):
+    async def refresh_state(self):
         await self.scheduler.tick()
-        logger.debug(f"Spa {self.spa_id} Status: {self.state}")
+        logger.debug("Spa %s Status: %s", self.spa_id, self.state)
 
-async def update_dashboard(self):
+    async def update_dashboard(self):
         dashboard_data = await self.spa.get_dashboard()
-        logger.debug(f"Update Dashboard {dashboard_data}")
+        self.state[SK_SETTEMP] = dashboard_data.get("setTemperature")
+        self.state[SK_WATERTEMP] = dashboard_data.get("currentTemperature")
 
-        self.state[SK_SETTEMP] = dashboard_data["setTemperature"]
-        self.state[SK_WATERTEMP] = dashboard_data["currentTemperature"]
-
-        status_list = []
-        for s in dashboard_data["statusList"]:
-            status_list.append(s.split(" ")[0])
-
+        status_list = [s.split(" ")[0] for s in dashboard_data.get("statusList", [])]
         force_refresh = self.state.get("statusList") != status_list
-
         self.state["statusList"] = status_list
 
         self.state[SK_HEATER] = 1 if SL_HEATING in status_list else 0
@@ -192,67 +299,127 @@ async def update_dashboard(self):
             for task in self.tasks[1:]:
                 task.trigger()
 
-async def update_pumps(self):
+    async def update_pumps(self):
         pump_data = await self.spa.get_pumps()
-        logger.debug(f"Update Pumps {pump_data}")
+        details = pump_data.get("pumpAndBlower", {})
 
-        pumps = self.state.get("pumps", {})
-        for p in pump_data.get("pumpAndBlower", {}).get("pumps", []):
+        pumps = self.state.get(SK_PUMPS, {})
+        for p in details.get("pumps", []):
             pump_id = str(p["pumpNumber"])
-            if not pump_id in pumps:
+            if pump_id not in pumps:
                 pumps[pump_id] = {}
-            pump = pumps.get(pump_id)
+            pump = pumps[pump_id]
             pump["apiId"] = str(p["id"])
-            pump["auto"] = p["hasAuto"]
-            pump["speeds"] = 1 # p["pumpSpeed"] Multiple speeds not supported
-            pump["hasSwitch"] = p["canSwitchOn"] and (not p["hasAuto"] or p["pumpSpeed"] > 1)
-            pump["state"] = p["pumpStatus"]
-
+            pump["auto"] = p.get("hasAuto", False)
+            pump["speeds"] = int(p.get("pumpSpeed", 1))
+            pump["hasSwitch"] = p.get("canSwitchOn", False) and (
+                not p.get("hasAuto", False) or int(p.get("pumpSpeed", 1)) > 1
+            )
+            pump["state"] = str(p.get("pumpStatus", "off")).lower()
         self.state[SK_PUMPS] = pumps
 
-async def update_information(self):
+        blower_data = details.get("blower") or {}
+        if blower_data:
+            self.state[SK_BLOWER] = {
+                "apiId": str(blower_data.get("id")),
+                "state": str(blower_data.get("blowerStatus", "off")).lower(),
+                "speed": int(blower_data.get("speed", 0)),
+            }
+
+        oxy = details.get("oxy")
+        if oxy is not None:
+            self.state[SK_OXY] = "on" if bool(oxy) else "off"
+
+    async def update_information(self):
         information_data = await self.spa.get_information()
-        logger.debug(f"Update Information {information_data}")
+        settings_summary = information_data.get("information", {}).get("settingsSummary", {})
 
-        settingsSummary = information_data.get("information", {}).get("settingsSummary", {})
+        operation_mode = self.fuzzy_find(OPERATION_MODES, settings_summary.get("operationMode"))
+        self.state[SK_OPERATION_MODE] = operation_mode or OPERATION_MODES[0]
 
-        operation_mode = self.fuzzyFind(OPERATION_MODES, settingsSummary.get("operationMode"))
-        self.state[SK_OPERATION_MODE] = operation_mode
-
-        power_save = int(settingsSummary.get("powersaveTimer", {}).get("mode"))
-        self.state[SK_POWER_SAVE] = POWER_SAVE[power_save]
+        try:
+            power_save = int(settings_summary.get("powersaveTimer", {}).get("mode"))
+            self.state[SK_POWER_SAVE] = POWER_SAVE[power_save]
+        except (TypeError, ValueError, IndexError):
+            self.state[SK_POWER_SAVE] = POWER_SAVE[0]
 
         if self.config_entry.options.get(OPT_ENABLE_HEAT_PUMP, False):
-            heat_pump = int(settingsSummary.get("heatPumpMode"))
-            self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
+            try:
+                heat_pump = int(settings_summary.get("heatPumpMode"))
+                self.state[SK_HEAT_PUMP] = HEAT_PUMP[heat_pump]
+            except (TypeError, ValueError, IndexError):
+                self.state[SK_HEAT_PUMP] = HEAT_PUMP[-1]
 
-            element_boost = settingsSummary.get("hpElementBoost")
-            self.state[SK_ELEMENT_BOOST] = "on" if element_boost == "1" else "off"
+            element_boost = settings_summary.get("hpElementBoost")
+            self.state[SK_ELEMENT_BOOST] = (
+                "on" if str(element_boost).lower() in {"1", "true"} else "off"
+            )
         else:
-            self.state[SK_HEAT_PUMP] = 'Off'
+            self.state[SK_HEAT_PUMP] = "Off"
             self.state[SK_ELEMENT_BOOST] = "off"
 
         timers = {}
-        for t in settingsSummary.get("sleepTimers", []):
+        for t in settings_summary.get("sleepTimers", []):
             timer_id = str(t["timerNumber"])
-            if not timer_id in timers:
-                timers[timer_id] = {}
-            timer = timers.get(timer_id)
-            timer['number'] = t["timerNumber"]
-            timer["apiId"] = t["id"]
-            timer["state"] = 'on' if t["isEnabled"] else 'off'
+            timers[timer_id] = {
+                "id": t.get("id"),
+                "number": t.get("timerNumber"),
+                "apiId": t.get("id"),
+                "name": t.get("timerName"),
+                "startTime": t.get("startTime"),
+                "endTime": t.get("endTime"),
+                "daysHex": t.get("daysHex"),
+                "isEnabled": bool(t.get("isEnabled")),
+                "state": "on" if t.get("isEnabled") else "off",
+            }
         self.state[SK_SLEEP_TIMERS] = timers
 
     async def update_lights(self):
         light_details = await self.spa.get_light_details()
-        logger.debug(f"Update Lights {light_details}")
+        brightness = light_details.get("brightness", light_details.get("lightBrightness", 0))
+        speed = light_details.get("speed", light_details.get("lightSpeed", 0))
         self.state[SK_LIGHTS] = {
-            "apiId": light_details.get('lightId'),
-            "state": "on" if light_details.get('lightOn') else "off"
+            "apiId": light_details.get("lightId"),
+            "state": "on" if light_details.get("lightOn") else "off",
+            "brightness": int(brightness or 0),
+            "speed": int(speed or 0),
+            "mode": light_details.get("mode", light_details.get("lightMode")),
+            "colour": light_details.get("colour", light_details.get("lightColour")),
         }
 
-def fuzzyFind(self, modes, mode):
+    async def update_settings(self):
+        filtration = await self.spa.get_filtration()
+        self.state[SK_FILTRATION_RUNTIME] = int(filtration.get("totalRuntime", 0))
+        self.state[SK_FILTRATION_CYCLE] = int(filtration.get("inBetweenCycles", 0))
+
+        try:
+            self.state[SK_LOCK_MODE] = int(await self.spa.get_lock_mode())
+        except (TypeError, ValueError):
+            self.state[SK_LOCK_MODE] = 0
+
+        try:
+            self.state[SK_TIMEOUT] = int(await self.spa.get_timeout())
+        except (TypeError, ValueError):
+            self.state[SK_TIMEOUT] = 0
+
+        sanitise_time = await self.spa.get_sanitise_time()
+        self.state[SK_SANITISE_TIME] = sanitise_time
+
+        sanitise_status = await self.spa.get_sanitise_status()
+        self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
+
+        try:
+            power_save = await self.spa.get_power_save()
+            mode = int(power_save.get("mode"))
+            self.state[SK_POWER_SAVE] = POWER_SAVE[mode]
+        except (TypeError, ValueError, IndexError, AttributeError):
+            pass
+
+    @staticmethod
+    def fuzzy_find(modes, mode):
+        if mode is None:
+            return None
         for m in modes:
-            if m.lower().startswith(mode.lower()):
+            if m.lower().startswith(str(mode).lower()):
                 return m
         return None

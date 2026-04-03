@@ -12,7 +12,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
-from .const import *
+from .const import (
+    DOMAIN,
+    SK_HEATER,
+    SK_PUMPS,
+    SK_SANITISE,
+    SK_SANITISE_TIME,
+    SK_SETTEMP,
+    SK_SLEEPING,
+    SK_WATERTEMP,
+)
 from .entity import SpaEntity
 
 async def async_setup_entry(
@@ -22,13 +31,14 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN]["spas"]:
+    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         entities += [
             SpaTemperatureSensor(coordinator, "Water Temperature", SK_WATERTEMP),
             SpaTemperatureSensor(coordinator, "Set Temperature", SK_SETTEMP),
             SpaBinarySensor(coordinator, "Heater", SK_HEATER),
             SpaBinarySensor(coordinator, "Sanitise", SK_SANITISE),
             SpaBinarySensor(coordinator, "Sleeping", SK_SLEEPING),
+            SpaTextSensor(coordinator, "Sanitise Time", SK_SANITISE_TIME),
         ]
 
         for k, v in coordinator.get_state(SK_PUMPS).items():
@@ -56,7 +66,7 @@ class SpaTemperatureSensor(SpaSensor, SensorEntity):
     @property
     def native_value(self):
         value = self.coordinator.get_state(self._status_id)
-        if not value:
+        if value is None:
             return None
         return int(value) / 10
 
@@ -78,3 +88,14 @@ class SpaBinarySensor(SpaSensor, BinarySensorEntity):
         if value == "auto":
             return False
         return int(value) == 1
+
+
+class SpaTextSensor(SpaSensor, SensorEntity):
+    """A generic text sensor."""
+
+    @property
+    def native_value(self):
+        try:
+            return self.coordinator.get_state(self._status_id)
+        except Exception:
+            return None
