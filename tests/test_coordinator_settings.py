@@ -299,6 +299,7 @@ async def test_update_dashboard_prefers_sanitise_on_flag_over_status_text():
     await coordinator.update_dashboard()
 
     assert coordinator.state[const.SK_SANITISE] == 1
+    assert coordinator.state[const.SK_SPA_STATUS] == "Heating"
 
 
 @pytest.mark.asyncio
@@ -322,6 +323,7 @@ async def test_update_dashboard_falls_back_to_status_list_when_sanitise_flag_mis
     await coordinator.update_dashboard()
 
     assert coordinator.state[const.SK_SANITISE] == 1
+    assert coordinator.state[const.SK_SPA_STATUS] == "Sanitise Cycle: 19:24"
 
 
 @pytest.mark.asyncio

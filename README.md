@@ -18,6 +18,7 @@ Endpoint reference:
 - Climate control for spa set temperature
 - Cloud connectivity binary sensor for SpaNET cloud reachability
 - Water temperature and set temperature sensors
+- `Spa Status` sensor showing the current raw dashboard status text
 - `Spa Clock` sensor showing the controller's current date/time text
 - `Pump A Mode` sensor for the current Pump A operating state
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state

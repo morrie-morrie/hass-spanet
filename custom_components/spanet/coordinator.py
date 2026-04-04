@@ -36,6 +36,7 @@ from .const import (
     SK_SANITISE,
     SK_SANITISE_COUNTDOWN,
     SK_SPA_DATETIME,
+    SK_SPA_STATUS,
     SK_SANITISE_STATUS,
     SK_SANITISE_TIME,
     SK_SETTINGS_DETAILS,
@@ -528,6 +529,7 @@ class Coordinator(DataUpdateCoordinator):
         status_list = [s.split(" ")[0] for s in raw_status_list]
         force_refresh = self.state.get("statusList") != status_list
         self.state["statusList"] = status_list
+        self.state[SK_SPA_STATUS] = ", ".join(raw_status_list) if raw_status_list else None
 
         self.state[SK_HEATER] = 1 if SL_HEATING in status_list else 0
         self.state[SK_SLEEPING] = 1 if SL_SLEEPING in status_list else 0

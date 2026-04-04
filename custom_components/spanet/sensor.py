@@ -13,6 +13,7 @@ from .const import (
     SK_SANITISE_COUNTDOWN,
     SK_SANITISE_STATUS,
     SK_SPA_DATETIME,
+    SK_SPA_STATUS,
     SK_SETTEMP,
     SK_WATERTEMP,
 )
@@ -33,6 +34,7 @@ async def async_setup_entry(
         ]
         if coordinator.state.get(SK_PUMPS, {}).get("A") is not None:
             entities.append(SpaTextSensor(coordinator, "Pump A Mode", f"{SK_PUMPS}.A.state"))
+        entities.append(SpaTextSensor(coordinator, "Spa Status", SK_SPA_STATUS))
         entities.append(SpaTextSensor(coordinator, "Spa Clock", SK_SPA_DATETIME))
         entities.append(SpaTextSensor(coordinator, "Sanitise Status", SK_SANITISE_STATUS))
         entities.append(SpaTextSensor(coordinator, "Sanitise Countdown", SK_SANITISE_COUNTDOWN))

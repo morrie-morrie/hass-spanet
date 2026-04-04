@@ -56,6 +56,7 @@ Primary live-state source for:
 
 - set temperature
 - current temperature
+- general spa status text
 - heater
 - sleeping
 - sanitise active
