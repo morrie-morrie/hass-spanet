@@ -24,6 +24,8 @@ SK_FILTRATION_RUNTIME = "filtrationRuntime"
 SK_FILTRATION_CYCLE = "filtrationCycle"
 SK_TIMEOUT = "timeout"
 SK_SANITISE_TIME = "sanitiseTime"
+SK_SANITISE_STATUS = "sanitiseStatus"
+SK_SANITISE_COUNTDOWN = "sanitiseCountdown"
 
 SL_HEATING = "Heating"
 SL_SLEEPING = "Sleeping"
@@ -40,7 +42,6 @@ RETIRED_ENTITY_NAMES_BY_DOMAIN = {
     "switch": {"Sanitise Status", "Lock Mode", "Blower"},
     "time": {"Sanitise Time"},
     "binary_sensor": {"Sanitise"},
-    "button": {"Run Sanitise"},
     "number": {
         "Light Brightness",
         "Light Speed",

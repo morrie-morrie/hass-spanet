@@ -100,9 +100,16 @@ Do not decouple these unless explicitly requested.
 
 Sanitise is treated as an action-oriented behavior, not a true persistent switch.
 
+- `Run Sanitise` is a button
+- `Stop Sanitise` is a button
 - `Sanitise Active` is a binary sensor sourced from live dashboard state
+- `Sanitise Status` and `Sanitise Countdown` are read-only sensors derived from the dashboard `statusList`
 - Do not expose sanitise as a toggleable switch
-- The manual sanitise trigger should stay out of the UI unless it is revalidated on a real spa; current live testing shows the API call updates the last-triggered timestamp but does not reliably start sanitise
+- The working live request shape is:
+  - `PUT /api/Settings/SanitiseStatus/{deviceId}`
+  - JSON body `{ "on": true }` to start
+  - JSON body `{ "on": false }` to stop
+- Do not fall back to the Swagger-style query-only form unless the app-shaped request stops working
 
 ### Sleep timer behavior
 

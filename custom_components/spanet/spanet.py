@@ -222,6 +222,7 @@ class SpaPool:
 
     async def set_sanitise_status(self, on: bool):
         attempts = [
+            (f"/Settings/SanitiseStatus/{self.id}", {"on": bool(on)}),
             (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {}),
             (f"/Settings/SanitiseStatus/{self.id}?on={1 if on else 0}", {}),
             (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on))}", {}),

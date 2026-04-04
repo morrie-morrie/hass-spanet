@@ -36,6 +36,8 @@ from .const import (
     SK_POWER_SAVE,
     SK_PUMPS,
     SK_SANITISE,
+    SK_SANITISE_COUNTDOWN,
+    SK_SANITISE_STATUS,
     SK_SANITISE_TIME,
     SK_SETTEMP,
     SK_SLEEP_TIMERS,
@@ -319,11 +321,12 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_sanitiser(self, value: str):
-        if str(value).lower() != "on":
-            logger.info("Ignoring sanitise '%s' request for spa %s; sanitise is a trigger action", value, self.spa_id)
+        requested = str(value).lower()
+        if requested not in {"on", "off"}:
+            logger.warning("Ignoring unknown sanitise request '%s' for spa %s", value, self.spa_id)
             return
         try:
-            await self.spa.set_sanitise_status(True)
+            await self.spa.set_sanitise_status(requested == "on")
         except SpaNetApiError as exc:
             logger.warning("Failed to set sanitise status for spa %s: %s", self.spa_id, exc)
             return
@@ -333,6 +336,9 @@ class Coordinator(DataUpdateCoordinator):
 
     async def trigger_sanitise(self):
         await self.set_sanitiser("on")
+
+    async def stop_sanitise(self):
+        await self.set_sanitiser("off")
 
     async def set_sanitise_time(self, value: str):
         await self.spa.set_sanitise_time(value)
@@ -423,7 +429,8 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_SETTEMP] = dashboard_data.get("setTemperature")
         self.state[SK_WATERTEMP] = dashboard_data.get("currentTemperature")
 
-        status_list = [s.split(" ")[0] for s in dashboard_data.get("statusList", [])]
+        raw_status_list = [str(s) for s in dashboard_data.get("statusList", [])]
+        status_list = [s.split(" ")[0] for s in raw_status_list]
         force_refresh = self.state.get("statusList") != status_list
         self.state["statusList"] = status_list
 
@@ -434,6 +441,16 @@ class Coordinator(DataUpdateCoordinator):
             self.state[SK_SANITISE] = 1 if "Sanitise" in status_list else 0
         else:
             self.state[SK_SANITISE] = 1 if bool(sanitise_on) else 0
+
+        sanitise_status = None
+        sanitise_countdown = None
+        for status in raw_status_list:
+            if status.startswith("Sanitise Cycle:"):
+                sanitise_countdown = status.split(":", 1)[1].strip()
+            elif status == "W.CLN":
+                sanitise_status = status
+        self.state[SK_SANITISE_STATUS] = sanitise_status
+        self.state[SK_SANITISE_COUNTDOWN] = sanitise_countdown
 
         if force_refresh:
             for task in self.tasks[1:]:

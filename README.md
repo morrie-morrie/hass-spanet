@@ -79,9 +79,16 @@ This fork prefers native Home Assistant entities where the API contract is clear
 ### Sanitise
 
 - `Sanitise Active` is exposed as a binary sensor from the live dashboard state
+- `Sanitise Status` is exposed as a text sensor and reports values such as `W.CLN`
+- `Sanitise Countdown` is exposed as a text sensor and reports values such as `19:48`
+- `Run Sanitise` and `Stop Sanitise` are exposed as button actions
 - `Sanitise Start Time` is exposed as a native `time` entity
 - Sanitise is not modeled as a switch
-- The manual trigger button has been removed because live API testing showed that the cloud call only updates the last-triggered timestamp and does not reliably start a sanitise cycle
+- Live app capture showed the working trigger uses:
+  - `PUT /api/Settings/SanitiseStatus/{deviceId}`
+  - body: `{ "on": true }` to start
+  - body: `{ "on": false }` to stop
+- The Swagger-style query-string form was misleading; the integration now follows the app request shape
 
 ### Heat Pump / Element Boost
 

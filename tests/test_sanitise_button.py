@@ -15,14 +15,11 @@ def _install_homeassistant_stubs():
     components = sys.modules.setdefault(
         "homeassistant.components", types.ModuleType("homeassistant.components")
     )
-    components_sensor = sys.modules.setdefault(
-        "homeassistant.components.sensor", types.ModuleType("homeassistant.components.sensor")
+    components_button = sys.modules.setdefault(
+        "homeassistant.components.button", types.ModuleType("homeassistant.components.button")
     )
     config_entries = sys.modules.setdefault(
         "homeassistant.config_entries", types.ModuleType("homeassistant.config_entries")
-    )
-    const_module = sys.modules.setdefault(
-        "homeassistant.const", types.ModuleType("homeassistant.const")
     )
     core = sys.modules.setdefault("homeassistant.core", types.ModuleType("homeassistant.core"))
     helpers = sys.modules.setdefault(
@@ -40,11 +37,8 @@ def _install_homeassistant_stubs():
         types.ModuleType("homeassistant.helpers.update_coordinator"),
     )
 
-    class SensorEntity:
+    class ButtonEntity:
         pass
-
-    class SensorDeviceClass:
-        TEMPERATURE = "temperature"
 
     class ConfigEntry:
         def __init__(self, entry_id="entry-1", options=None):
@@ -59,20 +53,42 @@ def _install_homeassistant_stubs():
         def __init__(self, **kwargs):
             self.kwargs = kwargs
 
+    class EntityCategory:
+        CONFIG = "config"
+        DIAGNOSTIC = "diagnostic"
+
     class CoordinatorEntity:
         def __init__(self, coordinator):
             self.coordinator = coordinator
 
-    components_sensor.SensorEntity = SensorEntity
-    components_sensor.SensorDeviceClass = SensorDeviceClass
+    components_button.ButtonEntity = ButtonEntity
     config_entries.ConfigEntry = ConfigEntry
-    const_module.UnitOfTemperature = SimpleNamespace(CELSIUS="C")
     core.HomeAssistant = HomeAssistant
     helpers_entity.DeviceInfo = DeviceInfo
+    helpers_entity.EntityCategory = EntityCategory
     helpers_entity_platform.AddEntitiesCallback = object
     helpers_update_coordinator.CoordinatorEntity = CoordinatorEntity
     components.__path__ = getattr(components, "__path__", [])
     helpers.__path__ = getattr(helpers, "__path__", [])
+
+    if "async_timeout" not in sys.modules:
+        async_timeout = types.ModuleType("async_timeout")
+
+        class _Timeout:
+            def __init__(self, _seconds):
+                self._seconds = _seconds
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        def timeout(seconds):
+            return _Timeout(seconds)
+
+        async_timeout.timeout = timeout
+        sys.modules["async_timeout"] = async_timeout
 
 
 def _ensure_package():
@@ -99,47 +115,36 @@ def _load(module_name: str, filename: str):
 
 const = _load("custom_components.spanet.const", "const.py")
 _load("custom_components.spanet.entity", "entity.py")
-sensor_module = _load("custom_components.spanet.sensor", "sensor.py")
-
-
-class _Coordinator:
-    def __init__(self):
-        self.hass = SimpleNamespace()
-        self.spa_name = "Morison Spa"
-        self.spa_id = "1"
-        self.state = {
-            const.SK_WATERTEMP: 325,
-            const.SK_SETTEMP: 330,
-            const.SK_SANITISE_STATUS: "W.CLN",
-            const.SK_SANITISE_COUNTDOWN: "19:48",
-            const.SK_PUMPS: {
-                "A": {"state": "auto", "displayName": "Pump A"},
-                "1": {"state": "off", "displayName": "Pump 1"},
-            },
-        }
-
-    def get_state(self, key, sub_key=None):
-        obj = self.state
-        path = key.split(".")
-        if sub_key is not None:
-            path.append(sub_key)
-        for p in path:
-            obj = obj[p]
-        return obj
+button_module = _load("custom_components.spanet.button", "button.py")
 
 
 @pytest.mark.asyncio
-async def test_sensor_entities_include_pump_a_mode_and_sanitise_fields():
+async def test_sanitise_button_created_and_invokes_trigger():
+    class _Coordinator:
+        def __init__(self):
+            self.hass = SimpleNamespace()
+            self.spa_name = "My Spa"
+            self.spa_id = "1"
+            self.state = {}
+            self.started = 0
+            self.stopped = 0
+
+        async def trigger_sanitise(self):
+            self.started += 1
+
+        async def stop_sanitise(self):
+            self.stopped += 1
+
     coordinator = _Coordinator()
     hass = SimpleNamespace(data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}})
     config_entry = SimpleNamespace(entry_id="entry-1", options={})
 
     created = []
-    await sensor_module.async_setup_entry(hass, config_entry, created.extend)
+    await button_module.async_setup_entry(hass, config_entry, created.extend)
 
     by_name = {entity._attr_name: entity for entity in created}
-    assert by_name["Water Temperature"].native_value == 32.5
-    assert by_name["Set Temperature"].native_value == 33.0
-    assert by_name["Pump A Mode"].native_value == "auto"
-    assert by_name["Sanitise Status"].native_value == "W.CLN"
-    assert by_name["Sanitise Countdown"].native_value == "19:48"
+    await by_name["Run Sanitise"].async_press()
+    await by_name["Stop Sanitise"].async_press()
+
+    assert coordinator.started == 1
+    assert coordinator.stopped == 1

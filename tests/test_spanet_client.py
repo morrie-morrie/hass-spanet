@@ -151,15 +151,15 @@ async def test_get_sanitise_time_allows_plain_text_response():
 
 
 @pytest.mark.asyncio
-async def test_set_sanitise_status_uses_query_flag():
+async def test_set_sanitise_status_uses_body_payload():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
 
     await pool.set_sanitise_status(True)
 
     _, path, payload = client.calls[-1]
-    assert path == "/Settings/SanitiseStatus/99?on=true"
-    assert payload == {}
+    assert path == "/Settings/SanitiseStatus/99"
+    assert payload == {"on": True}
 
 
 @pytest.mark.asyncio
