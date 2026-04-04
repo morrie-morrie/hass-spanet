@@ -334,6 +334,7 @@ async def test_blower_is_switch_only():
     )
     assert blower_speed.available is False
     assert blower_speed.extra_state_attributes == {"active_when_mode": "variable"}
+    assert getattr(blower_speed, "_attr_entity_category", None) is None
 
 
 @pytest.mark.asyncio
@@ -358,3 +359,4 @@ async def test_blower_speed_available_only_in_variable_mode():
     )
     assert blower_speed.available is True
     assert blower_speed.native_value == 5
+    assert getattr(blower_speed, "_attr_entity_category", None) is None

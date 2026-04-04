@@ -5,7 +5,6 @@ from __future__ import annotations
 from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, SK_BLOWER
@@ -31,7 +30,6 @@ class SpaBlowerSpeedNumber(SpaEntity, NumberEntity):
     _attr_native_min_value = 1
     _attr_native_max_value = 5
     _attr_native_step = 1
-    _attr_entity_category = EntityCategory.CONFIG
     _attr_icon = "mdi:fan-speed-3"
 
     def __init__(self, coordinator) -> None:
