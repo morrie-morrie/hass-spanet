@@ -324,7 +324,37 @@ async def test_blower_is_switch_only():
     await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
     await switch_module.async_setup_entry(hass, config_entry, created_switches.extend)
 
-    assert not any(entity._attr_name == "Blower Mode" for entity in created_selects)
-    assert not any(entity._attr_name == "Blower Speed" for entity in created_numbers)
-    blower_switch = next(entity for entity in created_switches if entity._attr_name == "Blower")
-    assert blower_switch.is_on is True
+    blower_select = next(entity for entity in created_selects if entity._attr_name == "Blower Mode")
+    assert blower_select.options == ["off", "ramp", "variable"]
+    assert blower_select.current_option == "ramp"
+    assert not any(entity._attr_name == "Blower" for entity in created_switches)
+
+    blower_speed = next(
+        entity for entity in created_numbers if entity._attr_name == "Blower Variable Speed"
+    )
+    assert blower_speed.available is False
+    assert blower_speed.extra_state_attributes == {"active_when_mode": "variable"}
+
+
+@pytest.mark.asyncio
+async def test_blower_speed_available_only_in_variable_mode():
+    coordinator = _Coordinator(
+        {
+            const.SK_PUMPS: {},
+            const.SK_SLEEP_TIMERS: {},
+            const.SK_FILTRATION_RUNTIME: 0,
+            const.SK_FILTRATION_CYCLE: 0,
+            const.SK_TIMEOUT: 0,
+            const.SK_BLOWER: {"state": "variable", "speed": 5},
+        }
+    )
+    hass, config_entry = _hass_and_entry(coordinator)
+
+    created_numbers = []
+    await number_module.async_setup_entry(hass, config_entry, created_numbers.extend)
+
+    blower_speed = next(
+        entity for entity in created_numbers if entity._attr_name == "Blower Variable Speed"
+    )
+    assert blower_speed.available is True
+    assert blower_speed.native_value == 5

@@ -43,7 +43,10 @@ Keep the Home Assistant device page intentionally simple.
   - `Pump A` is derived from the circulation pump and uses a select: `off / auto / on`
   - `Pump 1` and `Pump 2` are switch-based on the current observed spa model
   - do not assume one shared pump mode mapping across all pumps; use live pump-role behavior
-- Blower is exposed as a switch
+- Blower is exposed as:
+  - `Blower Mode` select: `off / ramp / variable`
+  - `Blower Variable Speed` numeric control for `1-5`
+  - the speed control is only active when mode is `variable`
 - Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
 - Advanced behavior should prefer services over extra select/number entities where possible

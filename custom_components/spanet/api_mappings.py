@@ -60,9 +60,9 @@ CIRCULATION_PUMP_STATE_TO_API = {
 }
 
 BLOWER_STATE_TO_API = {
-    "off": {"modeId": 2},
+    "off": {"modeId": 1},
     "ramp": {"modeId": 3},
-    "variable": {"modeId": 1},
+    "variable": {"modeId": 2},
 }
 
 LIGHT_ANIMATION_OPTIONS = ["Fade", "Step", "Party"]

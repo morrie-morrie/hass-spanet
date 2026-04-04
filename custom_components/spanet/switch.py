@@ -13,7 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
-    SK_BLOWER,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_PUMPS,
@@ -49,16 +48,6 @@ async def async_setup_entry(
                         partial(coordinator.set_pump, k),
                     )
                 )
-
-        if SK_BLOWER in coordinator.state:
-            entities.append(
-                SpaSwitch(
-                    coordinator,
-                    "Blower",
-                    f"{SK_BLOWER}.state",
-                    coordinator.set_blower_switch,
-                )
-            )
 
         for k, _ in coordinator.state.get(SK_SLEEP_TIMERS, {}).items():
             entities.append(

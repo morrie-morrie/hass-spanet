@@ -58,9 +58,10 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 ### Blower
 
-- `Blower` is exposed as a `switch` on the device page
-- Turning the blower on uses the integration's default active blower mode
-- Advanced blower mode and speed control are exposed via services
+- `Blower Mode` is exposed as a `select` with `off / ramp / variable`
+- `Blower Variable Speed` is exposed as a numeric control `1-5`
+- `Blower Variable Speed` is only active when `Blower Mode` is `variable`
+- Advanced blower control remains available through services for automations and scripts
 
 ### Lights
 
@@ -94,7 +95,7 @@ These services are intended for automations, scripts, dashboard buttons, and man
 The device page is kept intentionally simple for non-schedule advanced controls:
 
 - pumps follow live capability
-- blower is a switch
+- blower mode is a select and variable speed is a dedicated numeric control
 - light is a native light entity
 
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
@@ -111,7 +112,7 @@ data:
   mode: ramp
 ```
 
-Blower speed to 5:
+Blower variable speed to 5:
 
 ```yaml
 service: spanet.set_blower_speed

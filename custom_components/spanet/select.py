@@ -25,6 +25,7 @@ from .const import (
     SK_HEAT_PUMP,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
+    SK_BLOWER,
     SK_PUMPS,
     SK_SLEEP_TIMERS,
     SK_TIMEOUT,
@@ -104,6 +105,17 @@ async def async_setup_entry(
                     HEAT_PUMP_OPTIONS,
                     coordinator.set_heat_pump,
                     entity_category=EntityCategory.CONFIG,
+                )
+            )
+
+        if SK_BLOWER in coordinator.state:
+            entities.append(
+                SpaSelect(
+                    coordinator,
+                    "Blower Mode",
+                    f"{SK_BLOWER}.state",
+                    ["off", "ramp", "variable"],
+                    coordinator.set_blower,
                 )
             )
 

@@ -415,8 +415,8 @@ async def test_update_pumps_keeps_runtime_capability_driven_entities():
                 ],
                 "blower": {
                     "id": 13,
-                    "blowerStatus": "auto",
-                    "speed": 4,
+                    "blowerStatus": "ramp",
+                    "blowerVariableSpeed": 4,
                 },
             }
         }

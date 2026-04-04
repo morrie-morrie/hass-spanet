@@ -520,9 +520,9 @@ class Coordinator(DataUpdateCoordinator):
             speed = int(
                 blower_data.get("blowerVariableSpeed", blower_data.get("speed", 1)) or 1
             )
-            if raw_state in {"auto", "ramp"}:
+            if raw_state == "ramp":
                 mapped_state = "ramp"
-            elif raw_state in {"on", "variable", "low", "high"}:
+            elif raw_state in {"on", "variable", "vari", "low", "high"}:
                 mapped_state = "variable"
             else:
                 mapped_state = "off"

@@ -292,6 +292,22 @@ async def test_set_blower_payload_matches_contract_mapping():
     assert payload == {"deviceId": 99, "modeId": 3, "speed": 4}
 
 
+@pytest.mark.asyncio
+async def test_set_blower_variable_and_off_payload_match_live_contract():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_blower("7", "variable", 5)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetBlower/7"
+    assert payload == {"deviceId": 99, "modeId": 2, "speed": 5}
+
+    await pool.set_blower("7", "off", 1)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetBlower/7"
+    assert payload == {"deviceId": 99, "modeId": 1, "speed": 1}
+
+
 def test_api_mapping_helpers_cover_known_contract_values():
     assert api_mappings.operation_mode_from_api(1) == "Normal"
     assert api_mappings.power_save_from_api(3) == "High"

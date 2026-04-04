@@ -42,13 +42,12 @@ RETIRED_ENTITY_UNIQUE_IDS = set()
 RETIRED_ENTITY_NAMES_BY_DOMAIN = {
     "datetime": {"DateTime"},
     "sensor": {"Support Mode"},
-    "switch": {"Sanitise Status", "Lock Mode"},
+    "switch": {"Sanitise Status", "Lock Mode", "Blower"},
     "time": {"Sanitise Time"},
     "binary_sensor": {"Sanitise"},
     "number": {
         "Light Brightness",
         "Light Speed",
-        "Blower Speed",
         "Filtration Runtime",
         "Filtration Cycle Gap",
         "Timeout",
@@ -56,7 +55,6 @@ RETIRED_ENTITY_NAMES_BY_DOMAIN = {
     "select": {
         "Light Profile",
         "Light Animation",
-        "Blower Mode",
     },
 }
 
