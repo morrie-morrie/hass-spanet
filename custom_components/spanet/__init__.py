@@ -135,7 +135,7 @@ def _desired_pump_control_unique_ids(hass: HomeAssistant, config_entry: ConfigEn
             if not pump.get("hasSwitch", False):
                 continue
             domain = "select" if pump.get("auto", False) else "switch"
-            name = f"Pump {key}"
+            name = pump.get("displayName", f"Pump {key}")
             unique_id = f"{domain}.{_build_entity_key(coordinator.spa_id, name)}"
             desired.add(unique_id)
     return desired

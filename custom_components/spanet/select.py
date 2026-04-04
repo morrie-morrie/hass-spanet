@@ -112,9 +112,9 @@ async def async_setup_entry(
                 entities.append(
                     SpaSelect(
                         coordinator,
-                        f"Pump {k}",
+                        v.get("displayName", f"Pump {k}"),
                         f"{SK_PUMPS}.{k}.state",
-                        PUMP_SELECT_OPTIONS,
+                        v.get("supportedStates", PUMP_SELECT_OPTIONS),
                         partial(coordinator.set_pump, k),
                     )
                 )

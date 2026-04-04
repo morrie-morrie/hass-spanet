@@ -81,9 +81,10 @@ class SpaPool:
     async def get_pumps(self):
         return await self.client.get(f"/PumpsAndBlower/Get/{self.id}")
 
-    async def set_pump(self, pump_id: str, state: str):
+    async def set_pump(self, pump_id: str, state: str, state_map: dict | None = None):
         state = str(state).lower()
-        payload = PUMP_STATE_TO_API.get(state)
+        mapping = state_map or PUMP_STATE_TO_API
+        payload = mapping.get(state)
         if payload is None:
             logger.warning("Unknown modeId for pump state %s", state)
             return None

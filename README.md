@@ -51,8 +51,9 @@ This fork prefers native Home Assistant entities where the API contract is clear
 ### Pumps
 
 - Pumps are created from the live `PumpsAndBlower/Get` response
-- Auto-capable pumps are exposed as `select` entities with `off / auto / on`
-- Binary pumps are exposed as `switch` entities
+- `Pump A` is derived from the circulation pump and is exposed as a `select` with `off / auto / on`
+- `Pump 1` and `Pump 2` are exposed as `switch` entities on the current observed spa model
+- Pump mappings are role-specific and based on live observed API behavior, not one shared pump-mode assumption
 - Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
 ### Blower

@@ -22,12 +22,10 @@ from .const import (
 from .entity import SpaEntity
 
 
-def _pump_display_name(pump_key: str) -> str:
-    return f"Pump {pump_key}"
-
-
 def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
     key = str(item[0])
+    if key == "A":
+        return (-1, "A")
     if key.isdigit():
         return (0, f"{int(key):04d}")
     return (1, key)
@@ -46,7 +44,7 @@ async def async_setup_entry(
                 entities.append(
                     SpaSwitch(
                         coordinator,
-                        _pump_display_name(k),
+                        v.get("displayName", f"Pump {k}"),
                         f"{SK_PUMPS}.{k}.state",
                         partial(coordinator.set_pump, k),
                     )

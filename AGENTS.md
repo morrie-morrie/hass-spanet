@@ -40,8 +40,9 @@ When making design tradeoffs, prefer the option that better aligns with Home Ass
 Keep the Home Assistant device page intentionally simple.
 
 - Pumps are capability-driven:
-  - auto-capable pumps use selects
-  - binary pumps use switches
+  - `Pump A` is derived from the circulation pump and uses a select: `off / auto / on`
+  - `Pump 1` and `Pump 2` are switch-based on the current observed spa model
+  - do not assume one shared pump mode mapping across all pumps; use live pump-role behavior
 - Blower is exposed as a switch
 - Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
@@ -74,6 +75,7 @@ Use live API capability/state data as the source of truth.
 
 Examples:
 - pumps come from `PumpsAndBlower/Get`
+- the circulation pump may need to be modeled separately as `Pump A`
 - unsupported controls should not be forced into the UI
 - when an option is config-gated, preserve that gate unless intentionally changing product behavior
 

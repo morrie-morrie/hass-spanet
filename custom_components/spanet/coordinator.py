@@ -6,9 +6,12 @@ import async_timeout
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api_mappings import (
+    CIRCULATION_PUMP_STATE_TO_API,
     LIGHT_ANIMATION_OPTIONS,
     OPERATION_MODE_OPTIONS,
+    PUMP_ONE_STATE_TO_API,
     PUMP_SELECT_OPTIONS,
+    STANDARD_PUMP_STATE_TO_API,
     extract_time_string,
     heat_pump_from_api,
     normalize_light_mode,
@@ -149,15 +152,11 @@ class Coordinator(DataUpdateCoordinator):
     async def set_pump(self, key: str, state: str):
         pump = self.get_state(f"{SK_PUMPS}.{key}")
         normalized = str(state).lower()
-        if pump.get("auto", False):
-            if normalized not in PUMP_SELECT_OPTIONS:
-                logger.warning("Unsupported auto-capable pump state %s for pump %s", normalized, key)
-                return
-        elif normalized not in {"on", "off"}:
-            logger.warning("Unsupported binary pump state %s for pump %s", normalized, key)
+        if normalized not in set(pump.get("supportedStates", [])):
+            logger.warning("Unsupported pump state %s for pump %s", normalized, key)
             return
         pump["state"] = normalized
-        await self.spa.set_pump(pump["apiId"], normalized)
+        await self.spa.set_pump(pump["apiId"], normalized, pump.get("stateMap"))
         self.tasks[1].trigger(0)
         self._publish_local_state()
 
@@ -482,24 +481,37 @@ class Coordinator(DataUpdateCoordinator):
 
         pumps = self.state.get(SK_PUMPS, {})
         for p in details.get("pumps", []):
-            if bool(p.get("isCirc")) or int(p.get("pumpNumber", 0)) < 1:
-                continue
-            pump_id = str(p["pumpNumber"])
+            is_circ = bool(p.get("isCirc")) or int(p.get("pumpNumber", 0)) < 1
+            pump_number = int(p.get("pumpNumber", 0))
+            pump_id = "A" if is_circ else str(pump_number)
             if pump_id not in pumps:
                 pumps[pump_id] = {}
             pump = pumps[pump_id]
             raw_state = str(p.get("pumpStatus", "off")).lower()
-            if raw_state == "auto":
+            has_auto = bool(p.get("hasAuto", False))
+            if raw_state == "auto" and (is_circ or has_auto):
                 normalized_state = "auto"
+            elif not is_circ and pump_number == 1 and not has_auto and raw_state == "auto":
+                normalized_state = "on"
             elif raw_state in {"on", "high", "low", "1", "vari", "variable"}:
                 normalized_state = "on"
             else:
                 normalized_state = "off"
             pump["apiId"] = str(p["id"])
-            pump["auto"] = bool(p.get("hasAuto", False))
+            pump["auto"] = is_circ or has_auto
             pump["speeds"] = int(p.get("pumpSpeed", 1))
             pump["hasSwitch"] = bool(p.get("canSwitchOn", False))
             pump["state"] = normalized_state
+            pump["displayName"] = "Pump A" if is_circ else f"Pump {pump_id}"
+            if is_circ:
+                pump["supportedStates"] = PUMP_SELECT_OPTIONS
+                pump["stateMap"] = CIRCULATION_PUMP_STATE_TO_API
+            elif pump_number == 1 and not has_auto:
+                pump["supportedStates"] = ["off", "on"]
+                pump["stateMap"] = PUMP_ONE_STATE_TO_API
+            else:
+                pump["supportedStates"] = ["off", "on"] if not pump["auto"] else PUMP_SELECT_OPTIONS
+                pump["stateMap"] = STANDARD_PUMP_STATE_TO_API
         self.state[SK_PUMPS] = pumps
 
         blower_data = details.get("blower") or {}

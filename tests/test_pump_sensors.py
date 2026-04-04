@@ -146,8 +146,9 @@ async def test_pump_binary_sensors_created_for_switch_pumps():
             const.SK_SANITISE: 0,
             const.SK_SLEEPING: 0,
             const.SK_PUMPS: {
-                "1": {"hasSwitch": True, "state": "auto"},
-                "2": {"hasSwitch": True, "state": "off"},
+                "A": {"hasSwitch": True, "state": "auto", "displayName": "Pump A"},
+                "1": {"hasSwitch": True, "state": "auto", "displayName": "Pump 1"},
+                "2": {"hasSwitch": True, "state": "off", "displayName": "Pump 2"},
             },
         }
     )
@@ -164,10 +165,12 @@ async def test_pump_binary_sensors_created_for_switch_pumps():
     assert sanitise.is_on is False
 
     pump_entities = [entity for entity in created if entity._attr_name.startswith("Pump")]
-    assert [entity._attr_name for entity in pump_entities] == ["Pump 1", "Pump 2"]
+    assert [entity._attr_name for entity in pump_entities] == ["Pump A", "Pump 1", "Pump 2"]
     assert all(entity.entity_id.startswith("binary_sensor.") for entity in pump_entities)
 
+    pump_a = next(entity for entity in pump_entities if entity._attr_name == "Pump A")
     pump_1 = next(entity for entity in pump_entities if entity._attr_name == "Pump 1")
     pump_2 = next(entity for entity in pump_entities if entity._attr_name == "Pump 2")
+    assert pump_a.is_on is False
     assert pump_1.is_on is False
     assert pump_2.is_on is False

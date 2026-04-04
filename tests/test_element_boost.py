@@ -514,6 +514,66 @@ async def test_update_pumps_treats_vari_status_as_on():
 
 
 @pytest.mark.asyncio
+async def test_update_pumps_models_pump_a_and_pump_one_separately():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.state = {}
+
+    async def _get_pumps():
+        return {
+            "pumpAndBlower": {
+                "pumps": [
+                    {
+                        "id": 10,
+                        "pumpNumber": -1,
+                        "hasAuto": True,
+                        "pumpSpeed": -1,
+                        "isCirc": True,
+                        "canSwitchOn": True,
+                        "pumpStatus": "auto",
+                    },
+                    {
+                        "id": 11,
+                        "pumpNumber": 1,
+                        "hasAuto": False,
+                        "pumpSpeed": 1,
+                        "isCirc": False,
+                        "canSwitchOn": True,
+                        "pumpStatus": "auto",
+                    },
+                    {
+                        "id": 12,
+                        "pumpNumber": 2,
+                        "hasAuto": False,
+                        "pumpSpeed": 1,
+                        "isCirc": False,
+                        "canSwitchOn": True,
+                        "pumpStatus": "on",
+                    },
+                ],
+                "blower": {},
+            }
+        }
+
+    coordinator.spa = SimpleNamespace(get_pumps=_get_pumps)
+    await coordinator.update_pumps()
+
+    assert coordinator.state[const.SK_PUMPS]["A"]["displayName"] == "Pump A"
+    assert coordinator.state[const.SK_PUMPS]["A"]["supportedStates"] == ["off", "auto", "on"]
+    assert coordinator.state[const.SK_PUMPS]["A"]["state"] == "auto"
+
+    assert coordinator.state[const.SK_PUMPS]["1"]["supportedStates"] == ["off", "on"]
+    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "on"
+
+    assert coordinator.state[const.SK_PUMPS]["2"]["supportedStates"] == ["off", "on"]
+    assert coordinator.state[const.SK_PUMPS]["2"]["state"] == "on"
+
+
+@pytest.mark.asyncio
 async def test_update_lights_normalizes_lowercase_animation_modes():
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),
