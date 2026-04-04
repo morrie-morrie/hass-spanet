@@ -49,6 +49,7 @@ def _install_homeassistant_stubs():
 
     class BinarySensorDeviceClass:
         RUNNING = "running"
+        CONNECTIVITY = "connectivity"
 
     class SensorEntity:
         pass
@@ -155,6 +156,9 @@ async def test_pump_binary_sensors_created_for_switch_pumps():
 
     created = []
     await binary_sensor_module.async_setup_entry(hass, config_entry, created.extend)
+
+    cloud = next(entity for entity in created if entity._attr_name == "Cloud Connected")
+    assert cloud.is_on is None
 
     sanitise = next(entity for entity in created if entity._attr_name == "Sanitise Active")
     assert sanitise.is_on is False

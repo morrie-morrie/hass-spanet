@@ -27,6 +27,7 @@ class Scheduler:
 
     async def tick(self):
         now = int(time.time())
+        errors = []
         for task in self.tasks:
             if task.next_tick <= now:
                 try:
@@ -34,8 +35,10 @@ class Scheduler:
                     task.error_count = 0
                 except Exception as e:
                     task.error_count = task.error_count + 1
+                    errors.append(e)
                     logger.error(f"Error #{task.error_count} running task {task.callback.__name__}\n{traceback.format_exc()}\n")
 
                 # If the error count is 1, we're going to try again next tick
                 if task.error_count != 1:
                     task.next_tick = now + task.interval
+        return errors

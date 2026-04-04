@@ -37,6 +37,7 @@ HttpClient = spanet_module.HttpClient
 SpaNetResponseError = spanet_module.SpaNetResponseError
 SpaPool = spanet_module.SpaPool
 TokenSource = spanet_module.TokenSource
+SpaNetDeviceOffline = spanet_module.SpaNetDeviceOffline
 
 
 class FakeResponse:
@@ -300,6 +301,21 @@ async def test_http_client_raises_for_unexpected_json_shape():
 
     with pytest.raises(SpaNetResponseError):
         await client.get("/value")
+
+
+@pytest.mark.asyncio
+async def test_http_client_raises_device_offline_for_202_location_header():
+    session = FakeSession()
+    client = HttpClient(session)
+    session.next_response = FakeResponse(
+        status=202,
+        headers={"Location": "Device Offline"},
+        text_data="",
+        url="https://api.test/dashboard",
+    )
+
+    with pytest.raises(SpaNetDeviceOffline):
+        await client.get("/dashboard")
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    SK_CLOUD_CONNECTED,
     SK_HEATER,
     SK_PUMPS,
     SK_SANITISE,
@@ -37,6 +38,7 @@ async def async_setup_entry(
     for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
         entities.extend(
             [
+                SpaCloudConnectivityBinarySensor(coordinator),
                 SpaBinarySensor(coordinator, "Heater", SK_HEATER),
                 SpaBinarySensor(coordinator, "Sanitise Active", SK_SANITISE),
                 SpaBinarySensor(coordinator, "Sleeping", SK_SLEEPING),
@@ -71,3 +73,20 @@ class SpaBinarySensor(SpaEntity, BinarySensorEntity):
         if value == "auto":
             return False
         return int(value) == 1
+
+
+class SpaCloudConnectivityBinarySensor(SpaEntity, BinarySensorEntity):
+    """SpaNET cloud connectivity state."""
+
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "binary_sensor", "Cloud Connected")
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def is_on(self):
+        return self.coordinator.state.get(SK_CLOUD_CONNECTED)

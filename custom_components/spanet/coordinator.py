@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import timedelta
 
 import async_timeout
@@ -18,6 +19,7 @@ from .const import (
     OPT_ENABLE_HEAT_PUMP,
     SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
+    SK_CLOUD_CONNECTED,
     SK_DATE_TIME,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
@@ -44,9 +46,17 @@ from .const import (
     SL_SLEEPING,
 )
 from .scheduler import Scheduler
-from .spanet import SpaNetApiError
+from .spanet import SpaNetApiError, SpaNetDeviceOffline
 
 logger = logging.getLogger(__name__)
+
+OFFLINE_BACKOFF_SECONDS = {
+    0: 300,
+    1: 600,
+    2: 600,
+    3: 600,
+    4: 600,
+}
 
 
 class Coordinator(DataUpdateCoordinator):
@@ -95,6 +105,18 @@ class Coordinator(DataUpdateCoordinator):
     def queue_settings_refresh(self):
         self.tasks[4].trigger(0)
 
+    def _publish_local_state(self) -> None:
+        """Notify Home Assistant listeners without forcing another API round-trip."""
+        update_listeners = getattr(self, "async_update_listeners", None)
+        if callable(update_listeners):
+            update_listeners()
+
+    def _apply_offline_backoff(self) -> None:
+        now = int(time.time())
+        for index, task in enumerate(self.tasks):
+            delay = OFFLINE_BACKOFF_SECONDS.get(index, 600)
+            task.next_tick = now + delay
+
     def get_state(self, key: str, sub_key=None):
         obj = self.state
         path = key.split(".")
@@ -121,8 +143,8 @@ class Coordinator(DataUpdateCoordinator):
     async def set_temperature(self, temp: int):
         self.state[SK_SETTEMP] = temp
         await self.spa.set_temperature(temp)
-        await self.async_request_refresh()
         self.queue_refresh()
+        self._publish_local_state()
 
     async def set_pump(self, key: str, state: str):
         pump = self.get_state(f"{SK_PUMPS}.{key}")
@@ -137,14 +159,14 @@ class Coordinator(DataUpdateCoordinator):
         pump["state"] = normalized
         await self.spa.set_pump(pump["apiId"], normalized)
         self.tasks[1].trigger(0)
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_lights(self, state: str):
         lights = self.get_state(SK_LIGHTS)
         lights["state"] = state
         await self.spa.set_light_status(lights["apiId"], state == "on")
-        await self.async_request_refresh()
         self.queue_refresh()
+        self._publish_local_state()
 
     async def set_light_brightness(self, value: int):
         lights = self.get_state(SK_LIGHTS)
@@ -152,7 +174,7 @@ class Coordinator(DataUpdateCoordinator):
         lights["brightness"] = mapped_value
         await self.spa.set_light_brightness(lights["apiId"], mapped_value)
         self.queue_lights_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_light_speed(self, value: int):
         lights = self.get_state(SK_LIGHTS)
@@ -160,14 +182,14 @@ class Coordinator(DataUpdateCoordinator):
         lights["speed"] = mapped_value
         await self.spa.set_light_speed(lights["apiId"], mapped_value)
         self.queue_lights_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_light_mode(self, mode: str):
         lights = self.get_state(SK_LIGHTS)
         lights["mode"] = mode
         await self.spa.set_light_mode(lights["apiId"], mode)
         self.queue_lights_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_light_profile(self, profile: str):
         if profile not in {"Single", "Animated"}:
@@ -195,7 +217,7 @@ class Coordinator(DataUpdateCoordinator):
         lights["colour"] = colour
         await self.spa.set_light_colour(lights["apiId"], colour)
         self.queue_lights_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_operation_mode(self, mode: str):
         from .api_mappings import OPERATION_MODE_API_BY_LABEL
@@ -204,7 +226,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_operation_mode(mode_index)
         self.state[SK_OPERATION_MODE] = mode
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_power_save(self, mode: str):
         from .api_mappings import POWER_SAVE_API_BY_LABEL
@@ -213,7 +235,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_power_save(mode_index)
         self.state[SK_POWER_SAVE] = mode
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_sleep_timer(self, key: str, value: str):
         timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
@@ -221,7 +243,7 @@ class Coordinator(DataUpdateCoordinator):
         timer["isEnabled"] = value == "on"
         await self.spa.set_sleep_timer_enabled(timer["apiId"], value == "on")
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def _update_sleep_timer_fields(
         self,
@@ -251,7 +273,7 @@ class Coordinator(DataUpdateCoordinator):
         timer["daysHex"] = str(updated_days)
         timer["dayProfile"] = self._timer_day_profile_from_hex(str(updated_days))
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_sleep_timer_day_profile(self, key: str, profile: str):
         if profile == "Custom":
@@ -286,7 +308,7 @@ class Coordinator(DataUpdateCoordinator):
             is_enabled=is_enabled,
         )
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def update_sleep_timer(
         self,
@@ -308,18 +330,18 @@ class Coordinator(DataUpdateCoordinator):
             is_enabled=is_enabled,
         )
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def delete_sleep_timer(self, timer_id: int):
         await self.spa.delete_sleep_timer(timer_id)
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_heat_pump(self, mode: str):
         await self.spa.set_heat_pump(mode)
         self.state[SK_HEAT_PUMP] = mode
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_sanitiser(self, value: str):
         if str(value).lower() != "on":
@@ -335,7 +357,7 @@ class Coordinator(DataUpdateCoordinator):
             return
         self.queue_refresh()
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def trigger_sanitise(self):
         await self.set_sanitiser("on")
@@ -344,13 +366,13 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_sanitise_time(value)
         self.state[SK_SANITISE_TIME] = value
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_date_time(self, value: str):
         await self.spa.set_date_time(value)
         self.state[SK_DATE_TIME] = value
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_element_boost(self, value: str):
         if not self.state.get(SK_ELEMENT_BOOST_SUPPORTED, False):
@@ -366,7 +388,7 @@ class Coordinator(DataUpdateCoordinator):
 
         self.state[SK_ELEMENT_BOOST] = "on" if on else "off"
         self.queue_information_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_blower(self, value: str):
         blower = self.get_state(SK_BLOWER)
@@ -374,7 +396,7 @@ class Coordinator(DataUpdateCoordinator):
         blower["state"] = normalized
         await self.spa.set_blower(blower["apiId"], normalized, int(blower.get("speed", 1)))
         self.tasks[1].trigger(0)
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_blower_switch(self, value: str):
         target_state = "off" if str(value).lower() == "off" else "variable"
@@ -389,21 +411,21 @@ class Coordinator(DataUpdateCoordinator):
             blower["state"] = state
         await self.spa.set_blower(blower["apiId"], state, blower["speed"])
         self.tasks[1].trigger(0)
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_filtration_runtime(self, value: int):
         current_cycle = int(self.state.get(SK_FILTRATION_CYCLE, 0))
         self.state[SK_FILTRATION_RUNTIME] = value
         await self.spa.set_filtration(total_runtime=value, in_between_cycles=current_cycle)
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_filtration_cycle(self, value: int):
         current_runtime = int(self.state.get(SK_FILTRATION_RUNTIME, 0))
         self.state[SK_FILTRATION_CYCLE] = value
         await self.spa.set_filtration(total_runtime=current_runtime, in_between_cycles=value)
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def set_lock_mode_switch(self, value: str):
         return
@@ -412,7 +434,7 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_TIMEOUT] = value
         await self.spa.set_timeout(value)
         self.queue_settings_refresh()
-        await self.async_request_refresh()
+        self._publish_local_state()
 
     async def _async_update_data(self):
         try:
@@ -420,12 +442,21 @@ class Coordinator(DataUpdateCoordinator):
                 self.spa = await self.spanet.get_spa(self.spa_id)
             async with async_timeout.timeout(10):
                 await self.refresh_state()
+            self.state[SK_CLOUD_CONNECTED] = True
+        except SpaNetDeviceOffline as exc:
+            self.state[SK_CLOUD_CONNECTED] = False
+            self._apply_offline_backoff()
+            logger.info("Spa %s is offline according to SpaNET cloud", self.spa_id)
+            raise UpdateFailed("Spa offline") from exc
         except SpaNetApiError as exc:
             logger.error("API Error: %s", exc)
             raise UpdateFailed("Failed updating spanet") from exc
 
     async def refresh_state(self):
-        await self.scheduler.tick()
+        errors = await self.scheduler.tick()
+        offline_error = next((exc for exc in errors if isinstance(exc, SpaNetDeviceOffline)), None)
+        if offline_error is not None:
+            raise offline_error
         logger.debug("Spa %s Status: %s", self.spa_id, self.state)
 
     async def update_dashboard(self):

@@ -44,6 +44,10 @@ class SpaNetApiError(SpaNetException):
         super().__init__(f"API Error {response.status}: {body}")
 
 
+class SpaNetDeviceOffline(SpaNetApiError):
+    """SpaNET device is offline according to the cloud API."""
+
+
 class SpaNetResponseError(SpaNetException):
     """SpaNet response error."""
 
@@ -404,6 +408,9 @@ class HttpClient:
 
     async def raise_api_error(self, response):
         body = await response.text()
+        location = str(response.headers.get("Location", "")).strip().lower()
+        if response.status == 202 and location == "device offline":
+            raise SpaNetDeviceOffline(response, body)
         raise SpaNetApiError(response, body)
 
 

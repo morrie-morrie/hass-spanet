@@ -78,7 +78,7 @@ def _load(module_name: str, filename: str):
 const = _load("custom_components.spanet.const", "const.py")
 _load("custom_components.spanet.api_mappings", "api_mappings.py")
 _load("custom_components.spanet.scheduler", "scheduler.py")
-_load("custom_components.spanet.spanet", "spanet.py")
+spanet_module = _load("custom_components.spanet.spanet", "spanet.py")
 coordinator_module = _load("custom_components.spanet.coordinator", "coordinator.py")
 
 
@@ -163,6 +163,33 @@ class _Spa:
 
 
 @pytest.mark.asyncio
+async def test_offline_api_marks_cloud_connectivity_false():
+    class _Resp:
+        status = 202
+        headers = {"Location": "Device Offline"}
+
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=SimpleNamespace(),
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+
+    class _OfflineSpa:
+        async def get_dashboard(self):
+            raise spanet_module.SpaNetDeviceOffline(_Resp(), "")
+
+    coordinator.spa = _OfflineSpa()
+
+    with pytest.raises(coordinator_module.UpdateFailed):
+        await coordinator._async_update_data()
+
+    assert coordinator.state[const.SK_CLOUD_CONNECTED] is False
+    assert coordinator.tasks[0].next_tick > int(time.time())
+    assert coordinator.tasks[4].next_tick > int(time.time())
+
+
+@pytest.mark.asyncio
 async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),
@@ -185,7 +212,7 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
 
 
 @pytest.mark.asyncio
-async def test_settings_writes_queue_immediate_settings_refresh():
+async def test_settings_writes_queue_immediate_settings_refresh_without_full_refresh():
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),
         spanet=SimpleNamespace(),
@@ -211,12 +238,8 @@ async def test_settings_writes_queue_immediate_settings_refresh():
         },
     }
 
-    requested = {"count": 0}
-
-    async def _request_refresh():
-        requested["count"] += 1
-
-    coordinator.async_request_refresh = _request_refresh
+    notifications = {"count": 0}
+    coordinator.async_update_listeners = lambda: notifications.__setitem__("count", notifications["count"] + 1)
 
     await coordinator.set_timeout(30)
     assert coordinator.tasks[4].next_tick <= int(time.time())
@@ -231,4 +254,4 @@ async def test_settings_writes_queue_immediate_settings_refresh():
     assert coordinator.tasks[4].next_tick <= int(time.time())
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["startTime"] == "21:00"
 
-    assert requested["count"] == 3
+    assert notifications["count"] == 3
