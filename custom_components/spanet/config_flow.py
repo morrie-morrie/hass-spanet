@@ -14,7 +14,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 
 from .const import ACCOUNT_UNIQUE_ID_PREFIX, DOMAIN
-from .spanet import SpaNet, SpaNetAuthFailed
+from .spanet import SpaNet, SpaNetAuthFailed, SpaNetConnectionError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +50,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             info = await ConfigFlow.validate_input(self.hass, user_input)
         except SpaNetAuthFailed:
             errors["base"] = "invalid_auth"
+        except SpaNetConnectionError:
+            errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
@@ -96,6 +98,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 info = await ConfigFlow.validate_input(self.hass, user_input)
             except SpaNetAuthFailed:
                 errors["base"] = "invalid_auth"
+            except SpaNetConnectionError:
+                errors["base"] = "cannot_connect"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception during reauth")
                 errors["base"] = "unknown"
@@ -189,6 +193,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             info = await ConfigFlow.validate_input(self.hass, user_input)
         except SpaNetAuthFailed:
             errors["base"] = "invalid_auth"
+        except SpaNetConnectionError:
+            errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception during reconfigure")
             errors["base"] = "unknown"

@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    DOMAIN,
     SK_CLOUD_CONNECTED,
     SK_HEATER,
     SK_PUMPS,
@@ -19,6 +18,7 @@ from .const import (
     SK_SLEEPING,
 )
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 
 def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
@@ -37,7 +37,7 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         entities.extend(
             [
                 SpaCloudConnectivityBinarySensor(coordinator),

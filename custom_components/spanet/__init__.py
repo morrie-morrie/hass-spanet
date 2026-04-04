@@ -7,7 +7,7 @@ import uuid
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -19,8 +19,9 @@ from .const import (
     RETIRED_ENTITY_UNIQUE_IDS,
 )
 from .coordinator import Coordinator
+from .runtime_data import SpaNetRuntimeData, get_entry_runtime_data
 from .services import async_register_services, async_unregister_services
-from .spanet import SpaNet, SpaNetAuthFailed
+from .spanet import SpaNet, SpaNetAuthFailed, SpaNetConnectionError
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -43,8 +44,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     session = aiohttp_client.async_get_clientsession(hass)
     spanet = SpaNet(session)
 
-    entry_data = {"client": spanet, "coordinators": []}
+    entry_data = SpaNetRuntimeData(client=spanet)
     hass.data[DOMAIN][config_entry.entry_id] = entry_data
+    config_entry.runtime_data = entry_data
 
     if "email" not in config_entry.data or "password" not in config_entry.data:
         await async_register_services(hass)
@@ -58,6 +60,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
     except SpaNetAuthFailed as exc:
         raise ConfigEntryAuthFailed("SpaNET authentication failed") from exc
+    except SpaNetConnectionError as exc:
+        raise ConfigEntryNotReady("SpaNET connection failed during setup") from exc
 
     for spa in spanet.get_available_spas():
         coordinator = Coordinator(hass, spanet, spa, config_entry)
@@ -70,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             identifiers={(DOMAIN, spa["id"])},
             name=spa["name"],
         )
-        entry_data["coordinators"].append(coordinator)
+        entry_data.coordinators.append(coordinator)
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     await _async_cleanup_removed_entities(hass, config_entry)
@@ -84,7 +88,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
         has_entries = any(
-            key != DEVICE_ID and isinstance(value, dict)
+            key != DEVICE_ID and isinstance(value, (dict, SpaNetRuntimeData))
             for key, value in hass.data.get(DOMAIN, {}).items()
         )
         if not has_entries:
@@ -129,8 +133,8 @@ async def _async_cleanup_removed_entities(hass: HomeAssistant, config_entry: Con
 
 def _desired_pump_control_unique_ids(hass: HomeAssistant, config_entry: ConfigEntry) -> set[str]:
     desired: set[str] = set()
-    entry_data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
-    for coordinator in entry_data.get("coordinators", []):
+    entry_data = get_entry_runtime_data(hass, config_entry)
+    for coordinator in entry_data.coordinators:
         for key, pump in coordinator.state.get("pumps", {}).items():
             if not pump.get("hasSwitch", False):
                 continue

@@ -7,8 +7,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SK_BLOWER
+from .const import SK_BLOWER
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 
 async def async_setup_entry(
@@ -17,7 +18,7 @@ async def async_setup_entry(
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
     entities = []
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         if SK_BLOWER in coordinator.state:
             entities.append(SpaBlowerSpeedNumber(coordinator))
     async_add_entity(entities)

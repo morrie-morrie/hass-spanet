@@ -140,6 +140,9 @@ def _install_homeassistant_stubs():
     class ConfigEntryAuthFailed(Exception):
         pass
 
+    class ConfigEntryNotReady(Exception):
+        pass
+
     class FlowResult(dict):
         pass
 
@@ -224,6 +227,7 @@ def _install_homeassistant_stubs():
     core.ServiceCall = ServiceCall
     core.callback = callback
     exceptions_module.ConfigEntryAuthFailed = ConfigEntryAuthFailed
+    exceptions_module.ConfigEntryNotReady = ConfigEntryNotReady
     data_entry_flow.FlowResult = FlowResult
     helpers_aiohttp.async_get_clientsession = lambda hass: object()
     components_switch.SwitchEntity = SwitchEntity
@@ -498,6 +502,53 @@ async def test_setup_entry_raises_auth_failed_for_bad_credentials(monkeypatch):
     )
 
     with pytest.raises(sys.modules["homeassistant.exceptions"].ConfigEntryAuthFailed):
+        await init_module.async_setup_entry(hass, config_entry)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_returns_cannot_connect_for_connection_failures(monkeypatch):
+    class _FakeSpaNet:
+        def __init__(self, _session):
+            pass
+
+        async def authenticate(self, _email, _password, _device_id):
+            raise spanet_module.SpaNetConnectionError()
+
+    monkeypatch.setattr(config_flow_module, "SpaNet", _FakeSpaNet)
+
+    flow = config_flow_module.ConfigFlow()
+    flow.hass = SimpleNamespace()
+
+    result = await flow.async_step_user({"email": "test@example.com", "password": "secret"})
+
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "cannot_connect"
+
+
+@pytest.mark.asyncio
+async def test_setup_entry_raises_not_ready_for_connection_failures(monkeypatch):
+    class _FakeSpaNet:
+        def __init__(self, _session):
+            pass
+
+        async def authenticate(self, _email, _password, _device_id):
+            raise spanet_module.SpaNetConnectionError()
+
+    monkeypatch.setattr(init_module, "SpaNet", _FakeSpaNet)
+    monkeypatch.setattr(
+        sys.modules["homeassistant.helpers.aiohttp_client"],
+        "async_get_clientsession",
+        lambda hass: object(),
+    )
+
+    hass = SimpleNamespace(data={}, config_entries=SimpleNamespace())
+    config_entry = SimpleNamespace(
+        entry_id="entry-1",
+        data={"email": "test@example.com", "password": "secret"},
+        options={},
+    )
+
+    with pytest.raises(sys.modules["homeassistant.exceptions"].ConfigEntryNotReady):
         await init_module.async_setup_entry(hass, config_entry)
 
 

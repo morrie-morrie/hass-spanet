@@ -12,6 +12,7 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
+from .runtime_data import get_entry_runtime_data
 
 REDACT_CONFIG_KEYS = {"email", "password"}
 REDACT_STATE_KEYS = {
@@ -41,7 +42,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    entry_data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
+    entry_data = get_entry_runtime_data(hass, config_entry)
     registry = er.async_get(hass)
     entities = [
         entry.entity_id
@@ -50,7 +51,7 @@ async def async_get_config_entry_diagnostics(
     ]
 
     coordinators = []
-    for coordinator in entry_data.get("coordinators", []):
+    for coordinator in entry_data.coordinators:
         coordinators.append(
             {
                 "spa_id": coordinator.spa_id,

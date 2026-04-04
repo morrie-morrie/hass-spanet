@@ -11,7 +11,6 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
@@ -19,6 +18,7 @@ from .const import (
     SK_SLEEP_TIMERS,
 )
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 
 def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
@@ -37,7 +37,7 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         for k, v in sorted(coordinator.state.get(SK_PUMPS, {}).items(), key=_pump_sort_key):
             if v.get("hasSwitch", False) and not v.get("auto", False):
                 entities.append(

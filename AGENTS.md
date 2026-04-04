@@ -12,12 +12,14 @@ Use this file as the local instruction set for future AI-assisted edits in this 
 - Keep Home Assistant entity IDs and unique IDs stable unless a control is intentionally removed
 - Add or update tests where practical
 - Aim for Home Assistant Gold Standard quality wherever feasible, following official Home Assistant integration rules and best practices
+- Keep `custom_components/spanet/quality_scale.yaml` updated when quality-scale relevant behavior changes
 - Run validation after code changes:
   - `python -m compileall custom_components/spanet tests`
   - `python -m pytest -q`
 - When documentation or behavior changes, update `README.md`
 - When endpoint contracts are clarified, update `API_REFERENCE.md`
 - When shipping a change intended for users, update `custom_components/spanet/manifest.json` version
+- Prefer pinned Python requirements in `manifest.json`
 
 ## Home Assistant quality target
 
@@ -31,8 +33,16 @@ This means preferring:
 - diagnostics, translations, and documentation kept in sync
 - strong test coverage for changed behavior
 - avoiding UI clutter when a service or native HA pattern is a better fit
+- tracking progress toward Platinum-level Home Assistant standards without claiming a tier the repo has not actually earned
 
 When making design tradeoffs, prefer the option that better aligns with Home Assistant integration guidance unless there is a strong repo-specific reason not to.
+
+When improving quality-scale alignment, prioritize real Home Assistant outcomes over badge-chasing:
+- correct auth vs connectivity error handling
+- `ConfigEntry.runtime_data` usage
+- diagnostics and docs that stay aligned with real behavior
+- reducing noisy or privacy-heavy logging
+- replacing wildcard imports and ambiguous state access with explicit imports/types where practical
 
 ## Current product model
 

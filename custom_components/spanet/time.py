@@ -12,8 +12,9 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api_mappings import extract_time_string
-from .const import DOMAIN, SK_SANITISE_TIME, SK_SLEEP_TIMERS
+from .const import SK_SANITISE_TIME, SK_SLEEP_TIMERS
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 
 async def async_setup_entry(
@@ -22,7 +23,7 @@ async def async_setup_entry(
     async_add_entity: AddEntitiesCallback,
 ) -> bool:
     entities = []
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         entities.append(
             SpaConfigTime(
                 coordinator,

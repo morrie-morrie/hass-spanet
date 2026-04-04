@@ -32,6 +32,10 @@ class SpaNetAuthFailed(SpaNetException):
     """SpaNet authentication failed."""
 
 
+class SpaNetConnectionError(SpaNetException):
+    """SpaNet connection failed."""
+
+
 class SpaNetPoolUnknown(SpaNetException):
     """SpaPool not found."""
 
@@ -364,14 +368,24 @@ class SpaNet:
         client = HttpClient(self.session)
         try:
             login_data = await client.post("/Login/Authenticate", login_params)
-            if "access_token" not in login_data:
-                raise SpaNetAuthFailed()
-        except Exception as exc:
-            raise SpaNetAuthFailed(exc) from exc
+        except SpaNetApiError as exc:
+            if exc.response.status in {401, 403}:
+                raise SpaNetAuthFailed() from exc
+            raise SpaNetConnectionError(exc) from exc
+        except SpaNetConnectionError:
+            raise
+
+        if "access_token" not in login_data:
+            raise SpaNetAuthFailed()
 
         self.token_source = TokenSource(client, login_data, device_id)
         self.client = HttpClient(self.session, self.token_source)
-        device_data = await self.client.get("/Devices")
+        try:
+            device_data = await self.client.get("/Devices")
+        except SpaNetApiError as exc:
+            if exc.response.status in {401, 403}:
+                raise SpaNetAuthFailed() from exc
+            raise SpaNetConnectionError(exc) from exc
 
         self.spa_configs = [
             {
@@ -398,27 +412,41 @@ class HttpClient:
         self.token_source = token_source
 
     async def post(self, path, payload):
-        response = await self.session.post(
-            BASE_URL + path,
-            data=json.dumps(payload),
-            headers=await self.build_headers(),
-        )
+        try:
+            response = await self.session.post(
+                BASE_URL + path,
+                data=json.dumps(payload),
+                headers=await self.build_headers(),
+            )
+        except Exception as exc:
+            raise SpaNetConnectionError(exc) from exc
         return await self.check_response(response)
 
     async def put(self, path, payload):
-        response = await self.session.put(
-            BASE_URL + path,
-            data=json.dumps(payload),
-            headers=await self.build_headers(),
-        )
+        try:
+            response = await self.session.put(
+                BASE_URL + path,
+                data=json.dumps(payload),
+                headers=await self.build_headers(),
+            )
+        except Exception as exc:
+            raise SpaNetConnectionError(exc) from exc
         return await self.check_response(response)
 
     async def delete(self, path):
-        response = await self.session.delete(BASE_URL + path, headers=await self.build_headers())
+        try:
+            response = await self.session.delete(
+                BASE_URL + path, headers=await self.build_headers()
+            )
+        except Exception as exc:
+            raise SpaNetConnectionError(exc) from exc
         return await self.check_response(response)
 
     async def get(self, path, requires_json=True):
-        response = await self.session.get(BASE_URL + path, headers=await self.build_headers())
+        try:
+            response = await self.session.get(BASE_URL + path, headers=await self.build_headers())
+        except Exception as exc:
+            raise SpaNetConnectionError(exc) from exc
         return await self.check_response(response, requires_json)
 
     async def build_headers(self):

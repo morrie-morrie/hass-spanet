@@ -9,7 +9,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
 from .const import (
-    DOMAIN,
     SK_PUMPS,
     SK_SANITISE_COUNTDOWN,
     SK_SANITISE_STATUS,
@@ -17,6 +16,7 @@ from .const import (
     SK_WATERTEMP,
 )
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -25,7 +25,7 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         entities += [
             SpaTemperatureSensor(coordinator, "Water Temperature", SK_WATERTEMP),
             SpaTemperatureSensor(coordinator, "Set Temperature", SK_SETTEMP),

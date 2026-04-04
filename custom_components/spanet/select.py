@@ -17,7 +17,6 @@ from .api_mappings import (
     POWER_SAVE_OPTIONS,
 )
 from .const import (
-    DOMAIN,
     OPT_ENABLE_HEAT_PUMP,
     SLEEP_TIMER_DAY_PROFILES,
     SK_FILTRATION_CYCLE,
@@ -31,6 +30,7 @@ from .const import (
     SK_TIMEOUT,
 )
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 FILTRATION_CYCLE_OPTIONS = [str(value) for value in range(1, 25)]
 FILTRATION_RUNTIME_OPTIONS = [str(value) for value in (1, 2, 3, 4, 6, 8, 12, 24)]
@@ -53,7 +53,7 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
+    for coordinator in get_entry_coordinators(hass, config_entry):
         entities.append(
             SpaSelect(
                 coordinator,

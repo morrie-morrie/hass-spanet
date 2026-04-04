@@ -6,6 +6,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import DOMAIN
+from .runtime_data import iter_runtime_data
 
 SERVICE_SET_LIGHT_MODE = "set_light_mode"
 SERVICE_SET_LIGHT_COLOUR = "set_light_colour"
@@ -18,11 +19,8 @@ SERVICE_DELETE_SLEEP_TIMER = "delete_sleep_timer"
 
 
 def _find_coordinator(hass: HomeAssistant, spa_id: str):
-    domain_data = hass.data.get(DOMAIN, {})
-    for entry_data in domain_data.values():
-        if not isinstance(entry_data, dict):
-            continue
-        for coordinator in entry_data.get("coordinators", []):
+    for entry_data in iter_runtime_data(hass):
+        for coordinator in entry_data.coordinators:
             if coordinator.spa_id == str(spa_id):
                 return coordinator
     return None

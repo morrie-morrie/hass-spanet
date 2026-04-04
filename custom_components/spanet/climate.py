@@ -1,21 +1,23 @@
 """SpaNet Sensors"""
 from __future__ import annotations
+
 from typing import Any
 
 from homeassistant.components.climate import (
+    ATTR_TEMPERATURE,
     ClimateEntity,
-    HVACMode,
     HVACAction,
     ClimateEntityFeature,
+    HVACMode,
 )
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import *
+from .const import SK_HEATER, SK_SETTEMP, SK_WATERTEMP
 from .entity import SpaEntity
+from .runtime_data import get_entry_coordinators
 
 
 async def async_setup_entry(
@@ -25,12 +27,11 @@ async def async_setup_entry(
 ) -> bool:
     entities = []
 
-    for coordinator in hass.data[DOMAIN][config_entry.entry_id]["coordinators"]:
-        entities += [
-            SpaClimate(coordinator),
-        ]
+    for coordinator in get_entry_coordinators(hass, config_entry):
+        entities.append(SpaClimate(coordinator))
 
     async_add_entity(entities)
+    return True
 
 
 class SpaClimate(SpaEntity, ClimateEntity):
@@ -64,4 +65,7 @@ class SpaClimate(SpaEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        await self.coordinator.set_temperature(int(kwargs["temperature"] * 10))
+        temperature = kwargs.get(ATTR_TEMPERATURE)
+        if temperature is None:
+            return
+        await self.coordinator.set_temperature(int(float(temperature) * 10))

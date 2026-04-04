@@ -1,6 +1,7 @@
 import logging
 import time
 from datetime import timedelta
+from typing import TypedDict, cast
 
 import async_timeout
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -59,6 +60,52 @@ OFFLINE_BACKOFF_SECONDS = {
 }
 
 
+class PumpWritePayload(TypedDict):
+    modeId: int
+    pumpVariableSpeed: int
+
+
+class PumpState(TypedDict, total=False):
+    apiId: str
+    auto: bool
+    speeds: int
+    hasSwitch: bool
+    state: str
+    displayName: str
+    supportedStates: list[str]
+    stateMap: dict[str, PumpWritePayload]
+
+
+class BlowerState(TypedDict, total=False):
+    apiId: str
+    state: str
+    speed: int
+
+
+class LightState(TypedDict, total=False):
+    apiId: int | str
+    state: str
+    brightness: int
+    speed: int
+    mode: str | None
+    colour: str | None
+
+
+class SleepTimerState(TypedDict, total=False):
+    id: int | str | None
+    number: int | str | None
+    apiId: int | str | None
+    name: str | None
+    startTime: str | None
+    endTime: str | None
+    daysHex: str | None
+    dayProfile: str
+    isEnabled: bool
+    state: str
+    show: bool
+    allowHeating: bool
+
+
 class Coordinator(DataUpdateCoordinator):
     """SpaNET state coordinator."""
 
@@ -72,7 +119,7 @@ class Coordinator(DataUpdateCoordinator):
         self.spanet = spanet
         self.spa_config = spa_config
         self.config_entry = config_entry
-        self.state = {}
+        self.state: dict[str, object] = {}
         self.spa = None
         self.device = None
 
@@ -128,7 +175,7 @@ class Coordinator(DataUpdateCoordinator):
             return obj
         except (KeyError, IndexError, TypeError) as exc:
             logger.error("Failed to load data for status key %s", key, exc_info=exc)
-            logger.error("Status: %s", self.state)
+            logger.error("Available top-level state keys: %s", sorted(self.state.keys()))
             raise
 
     def get_state_numeric(self, key: str, divisor=1):
@@ -140,6 +187,18 @@ class Coordinator(DataUpdateCoordinator):
             return None
         return int(value) / divisor
 
+    def _get_pump(self, key: str) -> PumpState:
+        return cast(PumpState, self.get_state(f"{SK_PUMPS}.{key}"))
+
+    def _get_lights(self) -> LightState:
+        return cast(LightState, self.get_state(SK_LIGHTS))
+
+    def _get_blower(self) -> BlowerState:
+        return cast(BlowerState, self.get_state(SK_BLOWER))
+
+    def _get_sleep_timer(self, key: str) -> SleepTimerState:
+        return cast(SleepTimerState, self.get_state(f"{SK_SLEEP_TIMERS}.{key}"))
+
     async def set_temperature(self, temp: int):
         self.state[SK_SETTEMP] = temp
         await self.spa.set_temperature(temp)
@@ -147,7 +206,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_pump(self, key: str, state: str):
-        pump = self.get_state(f"{SK_PUMPS}.{key}")
+        pump = self._get_pump(key)
         normalized = str(state).lower()
         if normalized not in set(pump.get("supportedStates", [])):
             logger.warning("Unsupported pump state %s for pump %s", normalized, key)
@@ -158,14 +217,14 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_lights(self, state: str):
-        lights = self.get_state(SK_LIGHTS)
+        lights = self._get_lights()
         lights["state"] = state
         await self.spa.set_light_status(lights["apiId"], state == "on")
         self.queue_refresh()
         self._publish_local_state()
 
     async def set_light_brightness(self, value: int):
-        lights = self.get_state(SK_LIGHTS)
+        lights = self._get_lights()
         mapped_value = max(1, min(5, int(value)))
         lights["brightness"] = mapped_value
         await self.spa.set_light_brightness(lights["apiId"], mapped_value)
@@ -173,7 +232,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_light_speed(self, value: int):
-        lights = self.get_state(SK_LIGHTS)
+        lights = self._get_lights()
         mapped_value = max(1, min(5, int(value)))
         lights["speed"] = mapped_value
         await self.spa.set_light_speed(lights["apiId"], mapped_value)
@@ -181,14 +240,14 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_light_mode(self, mode: str):
-        lights = self.get_state(SK_LIGHTS)
+        lights = self._get_lights()
         lights["mode"] = mode
         await self.spa.set_light_mode(lights["apiId"], mode)
         self.queue_lights_refresh()
         self._publish_local_state()
 
     async def set_light_colour(self, colour: str):
-        lights = self.get_state(SK_LIGHTS)
+        lights = self._get_lights()
         lights["colour"] = colour
         await self.spa.set_light_colour(lights["apiId"], colour)
         self.queue_lights_refresh()
@@ -213,7 +272,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_sleep_timer(self, key: str, value: str):
-        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        timer = self._get_sleep_timer(key)
         timer["state"] = value
         timer["isEnabled"] = value == "on"
         await self.spa.set_sleep_timer_enabled(timer["apiId"], timer["number"], value == "on")
@@ -227,7 +286,7 @@ class Coordinator(DataUpdateCoordinator):
         if days_hex is None:
             logger.warning("Unknown sleep timer profile '%s' for timer %s", profile, key)
             return
-        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        timer = self._get_sleep_timer(key)
         await self.spa.set_sleep_timer_days(
             timer_id=int(timer["apiId"]),
             timer_number=int(timer["number"]),
@@ -240,7 +299,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_sleep_timer_on_time(self, key: str, value: str):
-        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        timer = self._get_sleep_timer(key)
         await self.spa.set_sleep_timer_start_time(
             timer_id=int(timer["apiId"]),
             timer_number=int(timer["number"]),
@@ -252,7 +311,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_sleep_timer_off_time(self, key: str, value: str):
-        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        timer = self._get_sleep_timer(key)
         await self.spa.set_sleep_timer_end_time(
             timer_id=int(timer["apiId"]),
             timer_number=int(timer["number"]),
@@ -359,7 +418,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_blower(self, value: str):
-        blower = self.get_state(SK_BLOWER)
+        blower = self._get_blower()
         normalized = str(value).lower()
         blower["state"] = normalized
         await self.spa.set_blower(blower["apiId"], normalized, int(blower.get("speed", 1)))
@@ -367,7 +426,7 @@ class Coordinator(DataUpdateCoordinator):
         self._publish_local_state()
 
     async def set_blower_speed(self, value: int):
-        blower = self.get_state(SK_BLOWER)
+        blower = self._get_blower()
         blower["speed"] = max(1, min(5, int(value)))
         state = blower.get("state", "variable")
         if state != "variable":
@@ -418,7 +477,12 @@ class Coordinator(DataUpdateCoordinator):
         offline_error = next((exc for exc in errors if isinstance(exc, SpaNetDeviceOffline)), None)
         if offline_error is not None:
             raise offline_error
-        logger.debug("Spa %s Status: %s", self.spa_id, self.state)
+        logger.debug(
+            "Spa %s state refreshed: keys=%s cloud=%s",
+            self.spa_id,
+            sorted(self.state.keys()),
+            self.state.get(SK_CLOUD_CONNECTED),
+        )
 
     async def update_dashboard(self):
         dashboard_data = await self.spa.get_dashboard()
@@ -463,7 +527,7 @@ class Coordinator(DataUpdateCoordinator):
             pump_id = "A" if is_circ else str(pump_number)
             if pump_id not in pumps:
                 pumps[pump_id] = {}
-            pump = pumps[pump_id]
+            pump = cast(PumpState, pumps[pump_id])
             raw_state = str(p.get("pumpStatus", "off")).lower()
             has_auto = bool(p.get("hasAuto", False))
             if raw_state == "auto" and (is_circ or has_auto):

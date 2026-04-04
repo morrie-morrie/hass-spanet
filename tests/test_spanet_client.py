@@ -38,6 +38,7 @@ SpaNetResponseError = spanet_module.SpaNetResponseError
 SpaPool = spanet_module.SpaPool
 TokenSource = spanet_module.TokenSource
 SpaNetDeviceOffline = spanet_module.SpaNetDeviceOffline
+SpaNetConnectionError = spanet_module.SpaNetConnectionError
 
 
 class FakeResponse:
@@ -75,6 +76,11 @@ class FakeSession:
     async def delete(self, url, headers=None):
         self.calls.append(("delete", url, None, headers))
         return self.next_response
+
+
+class FailingSession(FakeSession):
+    async def get(self, url, headers=None):
+        raise RuntimeError("network down")
 
 
 class FakeClient:
@@ -421,6 +427,14 @@ async def test_http_client_raises_device_offline_for_202_location_header():
 
     with pytest.raises(SpaNetDeviceOffline):
         await client.get("/dashboard")
+
+
+@pytest.mark.asyncio
+async def test_http_client_wraps_transport_errors_as_connection_errors():
+    client = HttpClient(FailingSession())
+
+    with pytest.raises(SpaNetConnectionError):
+        await client.get("/Devices")
 
 
 @pytest.mark.asyncio

@@ -267,6 +267,16 @@ data:
 - Some controls depend on the capabilities reported by the spa and may vary between models
 - Entity availability is intentionally driven by live API support where possible
 
+## Quality Scale
+
+- Home Assistant Integration Quality Scale progress is tracked in [quality_scale.yaml](C:\Scripts\C#\hass-spanet-morrie\custom_components\spanet\quality_scale.yaml)
+- The repository is being pushed toward Platinum-level standards, but the tracking file stays intentionally honest about remaining gaps instead of claiming a tier prematurely
+- Current higher-tier gaps still called out there are:
+  - strict typing across the integration
+  - a repair flow for cloud/app contract drift and unsupported capability combinations
+- Runtime data is now stored on `ConfigEntry.runtime_data`, with the existing `hass.data` mirror retained for compatibility with the current lightweight test harness
+- Python requirements are pinned in the manifest for reproducible installs and review hygiene
+
 ## Repository
 
 - Source: [morrie-morrie/hass-spanet](https://github.com/morrie-morrie/hass-spanet)

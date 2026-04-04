@@ -1,0 +1,22 @@
+rules:
+  config_flow: done
+  test_before_setup: done
+  reauthentication_flow: done
+  reconfiguration_flow: done
+  diagnostics: done
+  runtime_data: done
+  docs_high_level_description: done
+  docs_installation_parameters: done
+  docs_data_update: done
+  docs_known_limitations: done
+  entity_unique_id: done
+  has_entity_name: done
+  test_coverage: done
+  inject_websession: done
+  log_when_unavailable: done
+  strict_typing:
+    status: todo
+    comment: The integration is not yet fully typed end-to-end against Home Assistant runtime types.
+  repair_flow:
+    status: todo
+    comment: No repair issues are surfaced yet for cloud/app contract drift or unsupported capability combinations.
