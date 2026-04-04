@@ -148,3 +148,5 @@ async def test_sanitise_button_created_and_invokes_trigger():
 
     assert coordinator.started == 1
     assert coordinator.stopped == 1
+    assert getattr(by_name["Run Sanitise"], "_attr_entity_category", None) is None
+    assert getattr(by_name["Stop Sanitise"], "_attr_entity_category", None) is None

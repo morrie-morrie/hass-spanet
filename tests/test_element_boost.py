@@ -221,6 +221,7 @@ async def test_element_boost_switch_only_created_when_heat_pump_option_enabled()
     assert element.entity_id == "switch.myspa_ElementBoost"
     assert element._attr_unique_id == "switch.1_ElementBoost"
     assert element.available is False
+    assert getattr(element, "_attr_entity_category", None) is None
 
 
 @pytest.mark.asyncio

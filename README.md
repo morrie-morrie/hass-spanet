@@ -298,25 +298,25 @@ Example:
 
 ```powershell
 git add custom_components/spanet/manifest.json README.md
-git commit -m "Release 1.2.14"
+git commit -m "Release 1.3.0"
 git push origin main
 ```
 
-The workflow derives the tag from `manifest.json`, for example version `1.2.14` becomes tag `v1.2.14`.
+The workflow derives the tag from `manifest.json`, for example version `1.3.0` becomes tag `v1.3.0`.
 
 ### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
-- `tag`: the release tag, for example `v1.2.5`
-  - current example: `v1.2.14`
+- `tag`: the release tag, for example `v1.3.0`
+  - current example: `v1.3.0`
 - `target`: the git ref to release from, default `main`
 
 Or push a matching tag directly:
 
 ```powershell
-git tag v1.2.14
-git push origin v1.2.14
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.

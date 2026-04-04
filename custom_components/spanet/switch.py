@@ -68,7 +68,6 @@ async def async_setup_entry(
                     SK_ELEMENT_BOOST,
                     coordinator.set_element_boost,
                     availability_key=SK_ELEMENT_BOOST_SUPPORTED,
-                    entity_category=EntityCategory.CONFIG,
                 )
             )
 
