@@ -83,6 +83,18 @@ coordinator_module = _load("custom_components.spanet.coordinator", "coordinator.
 
 
 class _Spa:
+    async def get_settings_details(self):
+        return {
+            "operationMode": "ECON",
+            "heatPumpMode": "HEAT",
+            "powersaveMode": "HIGH",
+            "sanitiseTime": "14:00",
+            "timeout": "20",
+            "filtration": "12 | 3",
+            "showRunTimers": False,
+            "sleepTimers": "2",
+        }
+
     async def get_filtration(self):
         return {"totalRuntime": 3, "inBetweenCycles": 12}
 
@@ -146,8 +158,42 @@ class _Spa:
             "is_enabled": is_enabled,
         }
 
-    async def set_sleep_timer_enabled(self, timer_id: int, enabled: bool):
-        self.sleep_timer_enabled = {"timer_id": timer_id, "enabled": enabled}
+    async def set_sleep_timer_enabled(self, timer_id: int, timer_number: int, enabled: bool):
+        self.sleep_timer_enabled = {
+            "timer_id": timer_id,
+            "timer_number": timer_number,
+            "enabled": enabled,
+        }
+
+    async def set_sleep_timer_start_time(
+        self, timer_id: int, timer_number: int, start_time: str, is_enabled: bool
+    ):
+        self.sleep_timer_start = {
+            "timer_id": timer_id,
+            "timer_number": timer_number,
+            "start_time": start_time,
+            "is_enabled": is_enabled,
+        }
+
+    async def set_sleep_timer_end_time(
+        self, timer_id: int, timer_number: int, end_time: str, is_enabled: bool
+    ):
+        self.sleep_timer_end = {
+            "timer_id": timer_id,
+            "timer_number": timer_number,
+            "end_time": end_time,
+            "is_enabled": is_enabled,
+        }
+
+    async def set_sleep_timer_days(
+        self, timer_id: int, timer_number: int, days_hex: str, is_enabled: bool
+    ):
+        self.sleep_timer_days = {
+            "timer_id": timer_id,
+            "timer_number": timer_number,
+            "days_hex": days_hex,
+            "is_enabled": is_enabled,
+        }
 
 
 @pytest.mark.asyncio
@@ -199,6 +245,8 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["dayProfile"] == "Weekends"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["show"] is False
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["allowHeating"] is False
+    assert coordinator.state[const.SK_SETTINGS_DETAILS]["operationMode"] == "ECON"
+    assert coordinator.state[const.SK_SETTINGS_DETAILS]["filtration"] == "12 | 3"
 
 
 @pytest.mark.asyncio
@@ -285,10 +333,28 @@ async def test_settings_writes_queue_immediate_settings_refresh_without_full_ref
     await coordinator.set_sleep_timer("1", "off")
     assert coordinator.tasks[4].next_tick <= int(time.time())
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["state"] == "off"
+    assert coordinator.spa.sleep_timer_enabled == {"timer_id": 11, "timer_number": 1, "enabled": False}
 
     coordinator.tasks[4].next_tick = 999
     await coordinator.set_sleep_timer_on_time("1", "21:00")
     assert coordinator.tasks[4].next_tick <= int(time.time())
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["startTime"] == "21:00"
+    assert coordinator.spa.sleep_timer_start == {
+        "timer_id": 11,
+        "timer_number": 1,
+        "start_time": "21:00",
+        "is_enabled": False,
+    }
 
-    assert notifications["count"] == 3
+    coordinator.tasks[4].next_tick = 999
+    await coordinator.set_sleep_timer_day_profile("1", "Week Days")
+    assert coordinator.tasks[4].next_tick <= int(time.time())
+    assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["dayProfile"] == "Week Days"
+    assert coordinator.spa.sleep_timer_days == {
+        "timer_id": 11,
+        "timer_number": 1,
+        "days_hex": "1F",
+        "is_enabled": False,
+    }
+
+    assert notifications["count"] == 4

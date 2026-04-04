@@ -49,6 +49,7 @@ Keep the Home Assistant device page intentionally simple.
   - `Blower Variable Speed` numeric control for `1-5`
   - the speed control is always visible for UX, but only meaningful when mode is `variable`
   - blower is modeled separately from the pump switches even if it alters swim-pump behavior on the spa
+  - for the observed app contract, blower writes use `off = (modeId 1, speed 0)`, `ramp = (modeId 3, speed 0)`, `variable = (modeId 2, speed 1..5)`
 - Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
 - Advanced behavior should prefer services over extra select/number entities where possible
@@ -81,8 +82,10 @@ Use live API capability/state data as the source of truth.
 Examples:
 - pumps come from `PumpsAndBlower/Get`
 - the circulation pump may need to be modeled separately as `Pump A`
+- for the observed SV3 app contract, `Pump A` uses `off = 2`, `auto = 3`, `on = 1`
 - unsupported controls should not be forced into the UI
 - when an option is config-gated, preserve that gate unless intentionally changing product behavior
+- `Settings/GetSettingsDetails` is a secondary summary source for diagnostics/app parity, not the primary source of truth for writable settings
 
 ### Heat pump option
 
@@ -115,7 +118,9 @@ Sanitise is treated as an action-oriented behavior, not a true persistent switch
 
 - Sleep timer `Days` should only present writable named profiles
 - `Custom` should be surfaced as a derived/display state when the API returns a non-standard `daysHex`, not as a normal selectable preset
-- Sleep timer enable toggles currently require a duplicate full update because the live SpaNET backend ignores a single enable-only update
+- Sleep timer entity writes should follow the app-shaped partial update contract on `/SleepTimers/{timerId}`
+- Use partial payloads with `deviceId`, `timerNumber`, the changed field, and current `isEnabled`
+- Use app-style time strings such as `09:00 PM` for timer start/end writes
 
 ### Lock Mode
 

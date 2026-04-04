@@ -39,6 +39,7 @@ from .const import (
     SK_SANITISE_COUNTDOWN,
     SK_SANITISE_STATUS,
     SK_SANITISE_TIME,
+    SK_SETTINGS_DETAILS,
     SK_SETTEMP,
     SK_SLEEP_TIMERS,
     SK_SLEEPING,
@@ -218,37 +219,7 @@ class Coordinator(DataUpdateCoordinator):
         timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
         timer["state"] = value
         timer["isEnabled"] = value == "on"
-        await self.spa.set_sleep_timer_enabled(timer["apiId"], value == "on")
-        self.queue_settings_refresh()
-        self._publish_local_state()
-
-    async def _update_sleep_timer_fields(
-        self,
-        key: str,
-        *,
-        start_time: str | None = None,
-        end_time: str | None = None,
-        days_hex: str | None = None,
-    ):
-        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
-        updated_start = start_time if start_time is not None else timer.get("startTime")
-        updated_end = end_time if end_time is not None else timer.get("endTime")
-        updated_days = days_hex if days_hex is not None else timer.get("daysHex")
-
-        await self.spa.update_sleep_timer(
-            timer_id=int(timer["apiId"]),
-            timer_number=int(timer["number"]),
-            timer_name=str(timer.get("name", f"Timer {key}")),
-            start_time=str(updated_start),
-            end_time=str(updated_end),
-            days_hex=str(updated_days),
-            is_enabled=bool(timer.get("isEnabled", timer.get("state") == "on")),
-        )
-
-        timer["startTime"] = str(updated_start)
-        timer["endTime"] = str(updated_end)
-        timer["daysHex"] = str(updated_days)
-        timer["dayProfile"] = self._timer_day_profile_from_hex(str(updated_days))
+        await self.spa.set_sleep_timer_enabled(timer["apiId"], timer["number"], value == "on")
         self.queue_settings_refresh()
         self._publish_local_state()
 
@@ -259,13 +230,41 @@ class Coordinator(DataUpdateCoordinator):
         if days_hex is None:
             logger.warning("Unknown sleep timer profile '%s' for timer %s", profile, key)
             return
-        await self._update_sleep_timer_fields(key, days_hex=days_hex)
+        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        await self.spa.set_sleep_timer_days(
+            timer_id=int(timer["apiId"]),
+            timer_number=int(timer["number"]),
+            days_hex=str(days_hex),
+            is_enabled=bool(timer.get("isEnabled", timer.get("state") == "on")),
+        )
+        timer["daysHex"] = str(days_hex)
+        timer["dayProfile"] = self._timer_day_profile_from_hex(str(days_hex))
+        self.queue_settings_refresh()
+        self._publish_local_state()
 
     async def set_sleep_timer_on_time(self, key: str, value: str):
-        await self._update_sleep_timer_fields(key, start_time=value)
+        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        await self.spa.set_sleep_timer_start_time(
+            timer_id=int(timer["apiId"]),
+            timer_number=int(timer["number"]),
+            start_time=value,
+            is_enabled=bool(timer.get("isEnabled", timer.get("state") == "on")),
+        )
+        timer["startTime"] = str(value)
+        self.queue_settings_refresh()
+        self._publish_local_state()
 
     async def set_sleep_timer_off_time(self, key: str, value: str):
-        await self._update_sleep_timer_fields(key, end_time=value)
+        timer = self.get_state(f"{SK_SLEEP_TIMERS}.{key}")
+        await self.spa.set_sleep_timer_end_time(
+            timer_id=int(timer["apiId"]),
+            timer_number=int(timer["number"]),
+            end_time=value,
+            is_enabled=bool(timer.get("isEnabled", timer.get("state") == "on")),
+        )
+        timer["endTime"] = str(value)
+        self.queue_settings_refresh()
+        self._publish_local_state()
 
     async def create_sleep_timer(
         self,
@@ -549,6 +548,11 @@ class Coordinator(DataUpdateCoordinator):
             self.state[SK_LIGHT_ANIMATION] = "Fade"
 
     async def update_settings(self):
+        try:
+            self.state[SK_SETTINGS_DETAILS] = await self.spa.get_settings_details()
+        except Exception:
+            self.state.setdefault(SK_SETTINGS_DETAILS, {})
+
         filtration = await self.spa.get_filtration()
         self.state[SK_FILTRATION_RUNTIME] = int(filtration.get("totalRuntime", 0))
         self.state[SK_FILTRATION_CYCLE] = int(filtration.get("inBetweenCycles", 0))

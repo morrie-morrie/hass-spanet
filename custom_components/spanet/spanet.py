@@ -104,13 +104,14 @@ class SpaPool:
         if payload is None:
             logger.warning("Unknown blower state %s", state)
             return None
+        request_speed = max(1, min(5, int(speed))) if state == "variable" else 0
 
         return await self.client.put(
             f"/PumpsAndBlower/SetBlower/{blower_id}",
             {
                 "deviceId": int(self.id),
                 "modeId": payload["modeId"],
-                "speed": max(1, min(5, int(speed))),
+                "speed": request_speed,
             },
         )
 
@@ -123,6 +124,9 @@ class SpaPool:
     async def get_power_save(self):
         return await self.client.get(f"/Settings/PowerSave/{self.id}")
 
+    async def get_settings_details(self):
+        return await self.client.get(f"/Settings/GetSettingsDetails?deviceId={self.id}")
+
     async def set_power_save(self, mode: int):
         return await self.client.put(
             f"/Settings/PowerSave/{self.id}",
@@ -132,23 +136,77 @@ class SpaPool:
     async def get_sleep_timer(self):
         return await self.client.get(f"/SleepTimers/{self.id}")
 
-    async def set_sleep_timer_enabled(self, timer_id: int, enabled: bool):
-        timer = await self.client.get(f"/SleepTimers/{self.id}")
-        match = next((t for t in timer if int(t.get("id")) == int(timer_id)), None)
-        if match is None:
-            raise SpaNetException(f"Sleep timer {timer_id} not found")
-        update_kwargs = {
-            "timer_id": int(timer_id),
-            "timer_number": int(match.get("timerNumber")),
-            "timer_name": str(match.get("timerName")),
-            "start_time": str(match.get("startTime")),
-            "end_time": str(match.get("endTime")),
-            "days_hex": str(match.get("daysHex")),
-            "is_enabled": enabled,
+    @staticmethod
+    def _format_sleep_timer_time(value: str) -> str:
+        hour_text, minute_text = str(value).split(":", 1)
+        hour = int(hour_text)
+        minute = int(minute_text[:2])
+        meridiem = "AM" if hour < 12 else "PM"
+        hour_12 = hour % 12
+        if hour_12 == 0:
+            hour_12 = 12
+        return f"{hour_12:02d}:{minute:02d} {meridiem}"
+
+    async def _patch_sleep_timer(
+        self,
+        timer_id: int,
+        timer_number: int,
+        *,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        days_hex: str | None = None,
+        is_enabled: bool | None = None,
+    ):
+        payload: dict[str, object] = {
+            "deviceId": str(self.id),
+            "timerNumber": int(timer_number),
         }
-        # Live SpaNET behavior: enable-only timer updates are ignored on the first request.
-        await self.update_sleep_timer(**update_kwargs)
-        return await self.update_sleep_timer(**update_kwargs)
+        if start_time is not None:
+            payload["startTime"] = self._format_sleep_timer_time(start_time)
+        if end_time is not None:
+            payload["endTime"] = self._format_sleep_timer_time(end_time)
+        if days_hex is not None:
+            payload["daysHex"] = str(days_hex)
+        if is_enabled is not None:
+            payload["isEnabled"] = bool(is_enabled)
+        return await self.client.put(f"/SleepTimers/{int(timer_id)}", payload)
+
+    async def set_sleep_timer_enabled(self, timer_id: int, timer_number: int, enabled: bool):
+        return await self._patch_sleep_timer(
+            timer_id=int(timer_id),
+            timer_number=int(timer_number),
+            is_enabled=enabled,
+        )
+
+    async def set_sleep_timer_start_time(
+        self, timer_id: int, timer_number: int, start_time: str, is_enabled: bool
+    ):
+        return await self._patch_sleep_timer(
+            timer_id=int(timer_id),
+            timer_number=int(timer_number),
+            start_time=start_time,
+            is_enabled=is_enabled,
+        )
+
+    async def set_sleep_timer_end_time(
+        self, timer_id: int, timer_number: int, end_time: str, is_enabled: bool
+    ):
+        return await self._patch_sleep_timer(
+            timer_id=int(timer_id),
+            timer_number=int(timer_number),
+            end_time=end_time,
+            is_enabled=is_enabled,
+        )
+
+    async def set_sleep_timer_days(
+        self, timer_id: int, timer_number: int, days_hex: str, is_enabled: bool
+    ):
+        return await self._patch_sleep_timer(
+            timer_id=int(timer_id),
+            timer_number=int(timer_number),
+            days_hex=days_hex,
+            is_enabled=is_enabled,
+        )
 
     async def create_sleep_timer(
         self,

@@ -61,6 +61,7 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Pump 1` is exposed as a `switch`
 - `Pump 2` is exposed as a `switch`
 - Pump mappings are role-specific and based on live observed API behavior, not one shared pump-mode assumption
+- `Pump A` follows the app-confirmed write contract: `off = modeId 2`, `auto = modeId 3`, `on = modeId 1`
 - Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
 ### Blower
@@ -69,6 +70,10 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Blower Variable Speed` is exposed as a numeric control `1-5`
 - `Blower Variable Speed` is always visible so the control is easy to reach, but it is only meaningful when `Blower Mode` is `variable`
 - The blower is modeled separately from the pump switches even if it changes the swim-pump characteristics on the spa
+- The app-confirmed write contract is:
+  - `off = modeId 1, speed 0`
+  - `ramp = modeId 3, speed 0`
+  - `variable = modeId 2, speed 1..5`
 - Advanced blower control remains available through services for automations and scripts
 
 ### Lights
@@ -105,6 +110,12 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - If SpaNET returns `Device Offline`, entities will become unavailable while the integration backs off polling
 - That state indicates cloud/device reachability, not a broken integration install
 
+### App settings summary
+
+- The integration also reads `GET /api/Settings/GetSettingsDetails?deviceId={deviceId}` as a secondary app-summary source
+- This summary is used for diagnostics and app-parity checks only
+- Dedicated endpoints remain the primary source of truth for writable settings and schedules
+
 ## Services
 
 Domain: `spanet`
@@ -131,7 +142,10 @@ The device page is kept intentionally simple for non-schedule advanced controls:
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
 Sleep timer CRUD services remain available because the API supports timer lifecycle operations beyond the fixed entity model.
 The fixed timer entities map to timer slots `1` and `2`; `Custom` day profile is display-only when the API returns a non-standard `daysHex` value such as `FF`.
-Sleep timer enable toggles currently use a backend workaround because the SpaNET cloud API ignores a single enable-only update; the integration sends the same full update twice so Home Assistant and the cloud stay aligned.
+Sleep timer entity writes now follow the app-shaped partial update contract:
+- timer enable writes send `timerNumber`, `deviceId`, and `isEnabled`
+- timer time writes send the changed `startTime` or `endTime` in app-style `hh:mm AM/PM` format plus `isEnabled`
+- timer day-profile writes send `daysHex` plus `isEnabled`
 
 ### Common service examples
 

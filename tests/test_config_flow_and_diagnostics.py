@@ -372,6 +372,11 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
             "apiId": "123",
             "elementBoost": "off",
             "macAddress": "AA:BB",
+            "settingsDetails": {
+                "operationMode": "ECON",
+                "timeout": "20",
+                "spanetAccount": "Andrew Morison",
+            },
             "sleepTimers": {
                 "1": {
                     "state": "on",
@@ -391,6 +396,8 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
     assert diagnostics["config_entry"]["data"]["password"] == "**REDACTED**"
     assert diagnostics["coordinators"][0]["state"]["apiId"] == "**REDACTED**"
     assert diagnostics["coordinators"][0]["state"]["macAddress"] == "**REDACTED**"
+    assert diagnostics["coordinators"][0]["state"]["settingsDetails"]["operationMode"] == "ECON"
+    assert diagnostics["coordinators"][0]["state"]["settingsDetails"]["timeout"] == "20"
     assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["show"] is True
     assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["allowHeating"] is False
     assert diagnostics["entities"] == ["switch.spa_pump1"]

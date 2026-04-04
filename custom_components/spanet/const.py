@@ -26,6 +26,7 @@ SK_TIMEOUT = "timeout"
 SK_SANITISE_TIME = "sanitiseTime"
 SK_SANITISE_STATUS = "sanitiseStatus"
 SK_SANITISE_COUNTDOWN = "sanitiseCountdown"
+SK_SETTINGS_DETAILS = "settingsDetails"
 
 SL_HEATING = "Heating"
 SL_SLEEPING = "Sleeping"

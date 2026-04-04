@@ -113,18 +113,51 @@ class FakeClient:
 
 
 @pytest.mark.asyncio
-async def test_sleep_timer_enabled_uses_is_enabled_payload():
+async def test_sleep_timer_enabled_uses_app_shaped_partial_payload():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
 
-    await pool.set_sleep_timer_enabled(4, False)
+    await pool.set_sleep_timer_enabled(4, 1, False)
 
-    put_calls = [call for call in client.calls if call[0] == "put"]
-    assert len(put_calls) == 2
-    for _, path, payload in put_calls:
-        assert path == "/SleepTimers/4"
-        assert payload["isEnabled"] is False
-        assert payload["deviceId"] == 99
+    _, path, payload = client.calls[-1]
+    assert path == "/SleepTimers/4"
+    assert payload == {"deviceId": "99", "timerNumber": 1, "isEnabled": False}
+
+
+@pytest.mark.asyncio
+async def test_sleep_timer_partial_updates_match_app_contract():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_sleep_timer_start_time(4, 1, "21:00", True)
+    _, path, payload = client.calls[-1]
+    assert path == "/SleepTimers/4"
+    assert payload == {
+        "deviceId": "99",
+        "timerNumber": 1,
+        "startTime": "09:00 PM",
+        "isEnabled": True,
+    }
+
+    await pool.set_sleep_timer_end_time(4, 1, "09:00", False)
+    _, path, payload = client.calls[-1]
+    assert path == "/SleepTimers/4"
+    assert payload == {
+        "deviceId": "99",
+        "timerNumber": 1,
+        "endTime": "09:00 AM",
+        "isEnabled": False,
+    }
+
+    await pool.set_sleep_timer_days(4, 1, "7F", True)
+    _, path, payload = client.calls[-1]
+    assert path == "/SleepTimers/4"
+    assert payload == {
+        "deviceId": "99",
+        "timerNumber": 1,
+        "daysHex": "7F",
+        "isEnabled": True,
+    }
 
 
 @pytest.mark.asyncio
@@ -278,7 +311,7 @@ async def test_live_derived_pump_role_mappings_are_pinned():
     await pool.set_pump("7", "on", api_mappings.CIRCULATION_PUMP_STATE_TO_API)
     _, path, payload = client.calls[-1]
     assert path == "/PumpsAndBlower/SetPump/7"
-    assert payload == {"deviceId": 99, "modeId": 4, "pumpVariableSpeed": 0}
+    assert payload == {"deviceId": 99, "modeId": 1, "pumpVariableSpeed": 0}
 
     await pool.set_pump("8", "on", api_mappings.PUMP_ONE_STATE_TO_API)
     _, path, payload = client.calls[-1]
@@ -290,6 +323,16 @@ async def test_live_derived_pump_role_mappings_are_pinned():
     assert path == "/PumpsAndBlower/SetPump/9"
     assert payload == {"deviceId": 99, "modeId": 1, "pumpVariableSpeed": 0}
 
+    await pool.set_pump("7", "auto", api_mappings.CIRCULATION_PUMP_STATE_TO_API)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/7"
+    assert payload == {"deviceId": 99, "modeId": 3, "pumpVariableSpeed": 0}
+
+    await pool.set_pump("7", "off", api_mappings.CIRCULATION_PUMP_STATE_TO_API)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/7"
+    assert payload == {"deviceId": 99, "modeId": 2, "pumpVariableSpeed": 0}
+
 
 @pytest.mark.asyncio
 async def test_set_blower_payload_matches_contract_mapping():
@@ -300,7 +343,7 @@ async def test_set_blower_payload_matches_contract_mapping():
 
     _, path, payload = client.calls[-1]
     assert path == "/PumpsAndBlower/SetBlower/7"
-    assert payload == {"deviceId": 99, "modeId": 3, "speed": 4}
+    assert payload == {"deviceId": 99, "modeId": 3, "speed": 0}
 
 
 @pytest.mark.asyncio
@@ -316,7 +359,7 @@ async def test_set_blower_variable_and_off_payload_match_live_contract():
     await pool.set_blower("7", "off", 1)
     _, path, payload = client.calls[-1]
     assert path == "/PumpsAndBlower/SetBlower/7"
-    assert payload == {"deviceId": 99, "modeId": 1, "speed": 1}
+    assert payload == {"deviceId": 99, "modeId": 1, "speed": 0}
 
 
 def test_api_mapping_helpers_cover_known_contract_values():

@@ -53,7 +53,7 @@ PUMP_ONE_STATE_TO_API = {
 }
 
 CIRCULATION_PUMP_STATE_TO_API = {
-    "on": {"modeId": 4, "pumpVariableSpeed": 0},
+    "on": {"modeId": 1, "pumpVariableSpeed": 0},
     "off": {"modeId": 2, "pumpVariableSpeed": 0},
     "auto": {"modeId": 3, "pumpVariableSpeed": 0},
 }
