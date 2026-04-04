@@ -47,7 +47,7 @@ Keep the Home Assistant device page intentionally simple.
 - Blower is exposed as:
   - `Blower Mode` select: `off / ramp / variable`
   - `Blower Variable Speed` numeric control for `1-5`
-  - the speed control is only active when mode is `variable`
+  - the speed control is always visible for UX, but only meaningful when mode is `variable`
   - blower is modeled separately from the pump switches even if it alters swim-pump behavior on the spa
 - Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
@@ -100,10 +100,9 @@ Do not decouple these unless explicitly requested.
 
 Sanitise is treated as an action-oriented behavior, not a true persistent switch.
 
-- `Run Sanitise` is a button
 - `Sanitise Active` is a binary sensor sourced from live dashboard state
-- a successful trigger records a request with SpaNET cloud; actual running state is still determined by dashboard `sanitiseOn`
 - Do not expose sanitise as a toggleable switch
+- The manual sanitise trigger should stay out of the UI unless it is revalidated on a real spa; current live testing shows the API call updates the last-triggered timestamp but does not reliably start sanitise
 
 ### Sleep timer behavior
 

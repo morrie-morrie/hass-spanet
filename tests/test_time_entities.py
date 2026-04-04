@@ -144,3 +144,8 @@ async def test_time_entities_show_normalized_cloud_values():
     assert by_name["Sanitise Start Time"].native_value == time(8, 30)
     assert by_name["Sleep Timer 1 On Time"].native_value == time(22, 0)
     assert by_name["Sleep Timer 1 Off Time"].native_value == time(7, 0)
+    assert [entity._attr_name for entity in created] == [
+        "Sanitise Start Time",
+        "Sleep Timer 1 Off Time",
+        "Sleep Timer 1 On Time",
+    ]

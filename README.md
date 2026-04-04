@@ -15,6 +15,7 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 - Climate control for spa set temperature
 - Cloud connectivity binary sensor for SpaNET cloud reachability
 - Water temperature and set temperature sensors
+- `Pump A Mode` sensor for the current Pump A operating state
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
   - `Pump A` is exposed as a `select`: `off / auto / on`
@@ -66,7 +67,7 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - `Blower Mode` is exposed as a `select` with `off / ramp / variable`
 - `Blower Variable Speed` is exposed as a numeric control `1-5`
-- `Blower Variable Speed` is only active when `Blower Mode` is `variable`
+- `Blower Variable Speed` is always visible so the control is easy to reach, but it is only meaningful when `Blower Mode` is `variable`
 - The blower is modeled separately from the pump switches even if it changes the swim-pump characteristics on the spa
 - Advanced blower control remains available through services for automations and scripts
 
@@ -78,10 +79,9 @@ This fork prefers native Home Assistant entities where the API contract is clear
 ### Sanitise
 
 - `Sanitise Active` is exposed as a binary sensor from the live dashboard state
-- `Run Sanitise` is exposed as a button action
 - `Sanitise Start Time` is exposed as a native `time` entity
 - Sanitise is not modeled as a switch
-- A successful trigger records a sanitise request with SpaNET cloud; the active state is still governed by the live dashboard `sanitiseOn` status from the spa
+- The manual trigger button has been removed because live API testing showed that the cloud call only updates the last-triggered timestamp and does not reliably start a sanitise cycle
 
 ### Heat Pump / Element Boost
 

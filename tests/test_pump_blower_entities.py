@@ -330,7 +330,7 @@ async def test_blower_is_switch_only():
     blower_speed = next(
         entity for entity in created_numbers if entity._attr_name == "Blower Variable Speed"
     )
-    assert blower_speed.available is False
+    assert blower_speed.available is True
     assert blower_speed.extra_state_attributes == {"active_when_mode": "variable"}
     assert getattr(blower_speed, "_attr_entity_category", None) is None
 

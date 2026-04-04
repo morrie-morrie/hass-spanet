@@ -40,6 +40,7 @@ RETIRED_ENTITY_NAMES_BY_DOMAIN = {
     "switch": {"Sanitise Status", "Lock Mode", "Blower"},
     "time": {"Sanitise Time"},
     "binary_sensor": {"Sanitise"},
+    "button": {"Run Sanitise"},
     "number": {
         "Light Brightness",
         "Light Speed",

@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    SK_PUMPS,
     SK_SETTEMP,
     SK_WATERTEMP,
 )
@@ -27,6 +28,8 @@ async def async_setup_entry(
             SpaTemperatureSensor(coordinator, "Water Temperature", SK_WATERTEMP),
             SpaTemperatureSensor(coordinator, "Set Temperature", SK_SETTEMP),
         ]
+        if coordinator.state.get(SK_PUMPS, {}).get("A") is not None:
+            entities.append(SpaTextSensor(coordinator, "Pump A Mode", f"{SK_PUMPS}.A.state"))
 
     async_add_entities(entities)
 
@@ -52,3 +55,11 @@ class SpaTemperatureSensor(SpaSensor, SensorEntity):
         if value is None:
             return None
         return int(value) / 10
+
+
+class SpaTextSensor(SpaSensor, SensorEntity):
+    """A text sensor."""
+
+    @property
+    def native_value(self):
+        return self.coordinator.get_state(self._status_id)

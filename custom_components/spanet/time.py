@@ -35,17 +35,17 @@ async def async_setup_entry(
             entities.append(
                 SpaSleepTimerTime(
                     coordinator,
-                    f"Sleep Timer {key} On Time",
-                    f"{SK_SLEEP_TIMERS}.{key}.startTime",
-                    partial(coordinator.set_sleep_timer_on_time, key),
+                    f"Sleep Timer {key} Off Time",
+                    f"{SK_SLEEP_TIMERS}.{key}.endTime",
+                    partial(coordinator.set_sleep_timer_off_time, key),
                 )
             )
             entities.append(
                 SpaSleepTimerTime(
                     coordinator,
-                    f"Sleep Timer {key} Off Time",
-                    f"{SK_SLEEP_TIMERS}.{key}.endTime",
-                    partial(coordinator.set_sleep_timer_off_time, key),
+                    f"Sleep Timer {key} On Time",
+                    f"{SK_SLEEP_TIMERS}.{key}.startTime",
+                    partial(coordinator.set_sleep_timer_on_time, key),
                 )
             )
 

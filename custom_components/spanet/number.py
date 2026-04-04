@@ -38,10 +38,7 @@ class SpaBlowerSpeedNumber(SpaEntity, NumberEntity):
 
     @property
     def available(self) -> bool:
-        try:
-            return self.coordinator.get_state(f"{SK_BLOWER}.state") == "variable"
-        except Exception:
-            return False
+        return True
 
     @property
     def native_value(self):
