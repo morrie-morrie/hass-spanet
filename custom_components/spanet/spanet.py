@@ -1,8 +1,12 @@
 """SpaNET API client."""
 
+from __future__ import annotations
+
 import json
 import logging
 import time
+from datetime import datetime
+from typing import TypedDict
 
 import jwt
 
@@ -22,6 +26,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://app.spanet.net.au/api"
+
+
+class RateLimitState(TypedDict, total=False):
+    limit: str
+    remaining: int
+    reset_at: int
 
 
 class SpaNetException(Exception):
@@ -410,6 +420,7 @@ class HttpClient:
     def __init__(self, session, token_source=None):
         self.session = session
         self.token_source = token_source
+        self.rate_limit: RateLimitState = {}
 
     async def post(self, path, payload):
         try:
@@ -459,6 +470,7 @@ class HttpClient:
         return headers
 
     async def check_response(self, response, requires_json=False):
+        self._update_rate_limit(response)
         if response.status > 299:
             await self.raise_api_error(response)
 
@@ -476,6 +488,38 @@ class HttpClient:
             )
 
         return await response.text()
+
+    def _update_rate_limit(self, response) -> None:
+        headers = getattr(response, "headers", {}) or {}
+        limit = headers.get("X-Rate-Limit-Limit")
+        remaining_text = headers.get("X-Rate-Limit-Remaining")
+        reset_text = headers.get("X-Rate-Limit-Reset")
+
+        if limit is not None:
+            self.rate_limit["limit"] = str(limit)
+
+        if remaining_text is not None:
+            try:
+                self.rate_limit["remaining"] = int(str(remaining_text).strip())
+            except ValueError:
+                self.rate_limit.pop("remaining", None)
+
+        if reset_text is not None:
+            try:
+                reset_at = datetime.fromisoformat(str(reset_text).strip()).timestamp()
+            except ValueError:
+                self.rate_limit.pop("reset_at", None)
+            else:
+                self.rate_limit["reset_at"] = int(reset_at)
+
+    def get_rate_limit_backoff_seconds(self) -> int:
+        remaining = self.rate_limit.get("remaining")
+        reset_at = self.rate_limit.get("reset_at")
+        if remaining is None or reset_at is None:
+            return 0
+        if remaining > 0:
+            return 0
+        return max(0, int(reset_at - time.time()) + 1)
 
     async def raise_api_error(self, response):
         body = await response.text()

@@ -438,6 +438,27 @@ async def test_http_client_wraps_transport_errors_as_connection_errors():
 
 
 @pytest.mark.asyncio
+async def test_http_client_tracks_rate_limit_headers():
+    session = FakeSession()
+    client = HttpClient(session)
+    session.next_response = FakeResponse(
+        headers={
+            "Content-Type": "application/json",
+            "X-Rate-Limit-Limit": "1h",
+            "X-Rate-Limit-Remaining": "0",
+            "X-Rate-Limit-Reset": "2026-04-04T12:25:52",
+        },
+        json_data={},
+    )
+
+    await client.get("/Devices")
+
+    assert client.rate_limit["limit"] == "1h"
+    assert client.rate_limit["remaining"] == 0
+    assert isinstance(client.rate_limit["reset_at"], int)
+
+
+@pytest.mark.asyncio
 async def test_token_source_refreshes_when_token_is_near_expiry(monkeypatch):
     class RefreshClient:
         def __init__(self):

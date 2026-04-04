@@ -391,7 +391,16 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
         },
     )
     hass = SimpleNamespace(
-        data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}},
+        data={
+            const.DOMAIN: {
+                "entry-1": {
+                    "client": SimpleNamespace(
+                        rate_limit={"limit": "1h", "remaining": 0, "reset_at": 1775276752}
+                    ),
+                    "coordinators": [coordinator],
+                }
+            }
+        },
     )
 
     diagnostics = await diagnostics_module.async_get_config_entry_diagnostics(hass, config_entry)
@@ -404,6 +413,9 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
     assert diagnostics["coordinators"][0]["state"]["settingsDetails"]["timeout"] == "20"
     assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["show"] is True
     assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["allowHeating"] is False
+    assert diagnostics["rate_limit"]["limit"] == "1h"
+    assert diagnostics["rate_limit"]["remaining"] == 0
+    assert diagnostics["rate_limit"]["reset"] == "2026-04-04T04:25:52+00:00"
     assert diagnostics["entities"] == ["switch.spa_pump1"]
 
 

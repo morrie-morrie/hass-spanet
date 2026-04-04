@@ -11,7 +11,7 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 [![Open your Home Assistant instance and open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morrie-morrie&repository=hass-spanet&category=Integration)
 
 Endpoint reference:
-- [API_REFERENCE.md](C:\Scripts\C#\hass-spanet-morrie\API_REFERENCE.md)
+- [API_REFERENCE.md](./API_REFERENCE.md)
 
 ## Features
 
@@ -126,6 +126,7 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - The integration also reads `GET /api/Settings/GetSettingsDetails?deviceId={deviceId}` as a secondary app-summary source
 - This summary is used for diagnostics and app-parity checks only
+- Diagnostics also include the latest observed SpaNET rate-limit remaining count and reset timestamp when available
 - Dedicated endpoints remain the primary source of truth for writable settings and schedules
 
 ## Services
@@ -269,7 +270,7 @@ data:
 
 ## Quality Scale
 
-- Home Assistant Integration Quality Scale progress is tracked in [quality_scale.yaml](C:\Scripts\C#\hass-spanet-morrie\custom_components\spanet\quality_scale.yaml)
+- Home Assistant Integration Quality Scale progress is tracked in [quality_scale.yaml](./custom_components/spanet/quality_scale.yaml)
 - The repository is being pushed toward Platinum-level standards, but the tracking file stays intentionally honest about remaining gaps instead of claiming a tier prematurely
 - Current higher-tier gaps still called out there are:
   - strict typing across the integration

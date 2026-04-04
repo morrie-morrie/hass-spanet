@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -38,6 +39,22 @@ def _redact_mapping(value: Any, redact_keys: set[str]) -> Any:
     return value
 
 
+def _serialize_rate_limit(client: Any) -> dict[str, Any]:
+    rate_limit = getattr(client, "rate_limit", None)
+    if not isinstance(rate_limit, Mapping):
+        return {}
+
+    result: dict[str, Any] = {}
+    if "limit" in rate_limit:
+        result["limit"] = rate_limit["limit"]
+    if "remaining" in rate_limit:
+        result["remaining"] = rate_limit["remaining"]
+    reset_at = rate_limit.get("reset_at")
+    if isinstance(reset_at, (int, float)):
+        result["reset"] = datetime.fromtimestamp(reset_at, tz=timezone.utc).isoformat()
+    return result
+
+
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> dict[str, Any]:
@@ -67,6 +84,7 @@ async def async_get_config_entry_diagnostics(
             "data": _redact_mapping(dict(config_entry.data), REDACT_CONFIG_KEYS),
             "options": dict(config_entry.options),
         },
+        "rate_limit": _serialize_rate_limit(entry_data.client),
         "entities": entities,
         "coordinators": coordinators,
     }

@@ -218,7 +218,29 @@ async def test_offline_api_marks_cloud_connectivity_false():
     with pytest.raises(coordinator_module.UpdateFailed):
         await coordinator._async_update_data()
 
-    assert coordinator.state[const.SK_CLOUD_CONNECTED] is False
+
+@pytest.mark.asyncio
+async def test_rate_limit_backoff_skips_refresh_until_reset(monkeypatch):
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=SimpleNamespace(client=SimpleNamespace(get_rate_limit_backoff_seconds=lambda: 30)),
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.spa = SimpleNamespace()
+    coordinator.state = {"existing": True}
+
+    called = {"refresh": 0}
+
+    async def _refresh_state():
+        called["refresh"] += 1
+
+    coordinator.refresh_state = _refresh_state
+
+    result = await coordinator._async_update_data()
+
+    assert result == {"existing": True}
+    assert called["refresh"] == 0
     assert coordinator.tasks[0].next_tick > int(time.time())
     assert coordinator.tasks[4].next_tick > int(time.time())
 

@@ -164,6 +164,20 @@ class Coordinator(DataUpdateCoordinator):
             delay = OFFLINE_BACKOFF_SECONDS.get(index, 600)
             task.next_tick = now + delay
 
+    def _apply_rate_limit_backoff(self, delay: int) -> None:
+        if delay <= 0:
+            return
+        next_tick = int(time.time()) + delay
+        for task in self.tasks:
+            task.next_tick = max(int(task.next_tick), next_tick)
+
+    def _get_rate_limit_backoff_seconds(self) -> int:
+        client = getattr(self.spanet, "client", None)
+        getter = getattr(client, "get_rate_limit_backoff_seconds", None)
+        if callable(getter):
+            return int(getter())
+        return 0
+
     def get_state(self, key: str, sub_key=None):
         obj = self.state
         path = key.split(".")
@@ -460,9 +474,21 @@ class Coordinator(DataUpdateCoordinator):
         try:
             if not self.spa:
                 self.spa = await self.spanet.get_spa(self.spa_id)
+            backoff_seconds = self._get_rate_limit_backoff_seconds()
+            if backoff_seconds > 0:
+                self._apply_rate_limit_backoff(backoff_seconds)
+                logger.info(
+                    "Spa %s polling paused for %ss due to SpaNET API rate limiting",
+                    self.spa_id,
+                    backoff_seconds,
+                )
+                return self.state
             async with async_timeout.timeout(10):
                 await self.refresh_state()
             self.state[SK_CLOUD_CONNECTED] = True
+            backoff_seconds = self._get_rate_limit_backoff_seconds()
+            if backoff_seconds > 0:
+                self._apply_rate_limit_backoff(backoff_seconds)
         except SpaNetDeviceOffline as exc:
             self.state[SK_CLOUD_CONNECTED] = False
             self._apply_offline_backoff()
