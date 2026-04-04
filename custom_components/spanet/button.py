@@ -33,6 +33,13 @@ async def async_setup_entry(
                 coordinator.stop_sanitise,
             )
         )
+        entities.append(
+            SpaButton(
+                coordinator,
+                "Sync Spa Clock",
+                coordinator.sync_spa_datetime,
+            )
+        )
 
     async_add_entity(entities)
     return True

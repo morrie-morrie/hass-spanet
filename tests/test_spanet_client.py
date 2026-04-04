@@ -179,6 +179,29 @@ async def test_set_sanitise_time_payload():
 
 
 @pytest.mark.asyncio
+async def test_set_datetime_payload_matches_app_contract():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_datetime("05-04-2026 08:57")
+
+    _, path, payload = client.calls[-1]
+    assert path == "/Settings/DateTime/99"
+    assert payload == {"dateTime": "05-04-2026 08:57"}
+
+
+@pytest.mark.asyncio
+async def test_get_datetime_allows_plain_text_response():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    result = await pool.get_datetime()
+
+    assert result == {}
+    assert client.get_calls[-1] == ("get", "/Settings/DateTime/99", False)
+
+
+@pytest.mark.asyncio
 async def test_get_sanitise_time_allows_plain_text_response():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)

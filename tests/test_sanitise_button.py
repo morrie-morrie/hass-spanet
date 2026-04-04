@@ -128,12 +128,16 @@ async def test_sanitise_button_created_and_invokes_trigger():
             self.state = {}
             self.started = 0
             self.stopped = 0
+            self.synced = 0
 
         async def trigger_sanitise(self):
             self.started += 1
 
         async def stop_sanitise(self):
             self.stopped += 1
+
+        async def sync_spa_datetime(self):
+            self.synced += 1
 
     coordinator = _Coordinator()
     hass = SimpleNamespace(data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}})
@@ -145,8 +149,11 @@ async def test_sanitise_button_created_and_invokes_trigger():
     by_name = {entity._attr_name: entity for entity in created}
     await by_name["Run Sanitise"].async_press()
     await by_name["Stop Sanitise"].async_press()
+    await by_name["Sync Spa Clock"].async_press()
 
     assert coordinator.started == 1
     assert coordinator.stopped == 1
+    assert coordinator.synced == 1
     assert getattr(by_name["Run Sanitise"], "_attr_entity_category", None) is None
     assert getattr(by_name["Stop Sanitise"], "_attr_entity_category", None) is None
+    assert getattr(by_name["Sync Spa Clock"], "_attr_entity_category", None) is None

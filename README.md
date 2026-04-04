@@ -18,6 +18,7 @@ Endpoint reference:
 - Climate control for spa set temperature
 - Cloud connectivity binary sensor for SpaNET cloud reachability
 - Water temperature and set temperature sensors
+- `Spa Clock` sensor showing the controller's current date/time text
 - `Pump A Mode` sensor for the current Pump A operating state
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
@@ -95,6 +96,7 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Sanitise Status` is exposed as a text sensor and reports values such as `W.CLN`
 - `Sanitise Countdown` is exposed as a text sensor and reports values such as `19:48`
 - `Run Sanitise` and `Stop Sanitise` are exposed as button actions
+- `Sync Spa Clock` is exposed as a maintenance button action
 - `Sanitise Start Time` is exposed as a native `time` entity
 - Sanitise is not modeled as a switch
 - Live app capture showed the working trigger uses:
@@ -138,6 +140,7 @@ Domain: `spanet`
 - `set_light_speed`
 - `set_blower_mode`
 - `set_blower_speed`
+- `set_spa_datetime`
 - `create_sleep_timer`
 - `update_sleep_timer`
 - `delete_sleep_timer`
@@ -153,6 +156,7 @@ The device page is kept intentionally simple for non-schedule advanced controls:
 - light is a native light entity
 
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
+Spa clock maintenance is exposed as a button for quick sync and a service for explicit manual setting.
 Sleep timer CRUD services remain available because the API supports timer lifecycle operations beyond the fixed entity model.
 The fixed timer entities map to timer slots `1` and `2`; `Custom` day profile is display-only when the API returns a non-standard `daysHex` value such as `FF`.
 Sleep timer entity writes now follow the app-shaped partial update contract:
@@ -207,6 +211,15 @@ data:
   speed: 3
 ```
 
+Set spa controller date and time:
+
+```yaml
+service: spanet.set_spa_datetime
+data:
+  spa_id: "12345"
+  date_time: "05-04-2026 08:57"
+```
+
 Create Sleep Timer:
 
 ```yaml
@@ -255,6 +268,12 @@ data:
 
 `create_sleep_timer`
 - Creates a sleep timer profile using raw SpaNET timer fields
+
+`set_spa_datetime`
+- Sets the spa controller clock using SpaNET app format `DD-MM-YYYY HH:MM`
+- Fields:
+  - `spa_id`
+  - `date_time`
 
 `update_sleep_timer`
 - Updates an existing sleep timer profile using raw SpaNET timer fields

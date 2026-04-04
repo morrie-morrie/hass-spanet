@@ -79,6 +79,10 @@
       "name": "Set Blower Speed",
       "description": "Set blower variable speed from 1 to 5."
     },
+    "set_spa_datetime": {
+      "name": "Set Spa Date And Time",
+      "description": "Set the spa controller clock using SpaNET app format DD-MM-YYYY HH:MM."
+    },
     "create_sleep_timer": {
       "name": "Create Sleep Timer",
       "description": "Create a sleep timer profile using raw SpaNET timer fields."

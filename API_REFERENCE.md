@@ -469,6 +469,35 @@ Observed write body:
 }
 ```
 
+### Date and time
+
+```http
+GET /api/Settings/DateTime/{deviceId}
+PUT /api/Settings/DateTime/{deviceId}
+```
+
+Observed read behavior:
+
+- plain text response, for example:
+
+```text
+05/04/2026 08:57:00AM
+```
+
+Observed write body:
+
+```json
+{
+  "dateTime": "05-04-2026 08:57"
+}
+```
+
+The integration exposes this as:
+
+- a `Sync Spa Clock` button that writes the current local system time
+- a `set_spa_datetime` service for explicit manual setting
+- a read-only `Spa Clock` sensor showing the controller's returned text value
+
 ### Sanitise start/stop action
 
 ```http

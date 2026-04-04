@@ -104,6 +104,9 @@ class _Spa:
     async def get_sanitise_time(self):
         return {"time": "08:30:00"}
 
+    async def get_datetime(self):
+        return "05/04/2026 08:57:00AM"
+
     async def get_power_save(self):
         return {"mode": 3}
 
@@ -258,6 +261,7 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     await coordinator.update_settings()
 
     assert coordinator.state[const.SK_SANITISE_TIME] == "08:30"
+    assert coordinator.state[const.SK_SPA_DATETIME] == "05/04/2026 08:57:00AM"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["startTime"] == "22:00"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["endTime"] == "08:30"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["state"] == "on"

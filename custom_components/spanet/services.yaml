@@ -76,6 +76,20 @@ set_blower_speed:
           min: 1
           max: 5
 
+set_spa_datetime:
+  name: Set Spa Date And Time
+  description: Set the spa controller clock using SpaNET app format DD-MM-YYYY HH:MM.
+  fields:
+    spa_id:
+      required: true
+      selector:
+        text:
+    date_time:
+      required: true
+      example: "05-04-2026 08:57"
+      selector:
+        text:
+
 create_sleep_timer:
   name: Create Sleep Timer
   description: Create a sleep timer profile using raw SpaNET timer fields.

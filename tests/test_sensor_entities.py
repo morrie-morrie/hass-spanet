@@ -112,6 +112,7 @@ class _Coordinator:
             const.SK_SETTEMP: 330,
             const.SK_SANITISE_STATUS: "W.CLN",
             const.SK_SANITISE_COUNTDOWN: "19:48",
+            const.SK_SPA_DATETIME: "05/04/2026 08:57:00AM",
             const.SK_PUMPS: {
                 "A": {"state": "auto", "displayName": "Pump A"},
                 "1": {"state": "off", "displayName": "Pump 1"},
@@ -141,5 +142,6 @@ async def test_sensor_entities_include_pump_a_mode_and_sanitise_fields():
     assert by_name["Water Temperature"].native_value == 32.5
     assert by_name["Set Temperature"].native_value == 33.0
     assert by_name["Pump A Mode"].native_value == "auto"
+    assert by_name["Spa Clock"].native_value == "05/04/2026 08:57:00AM"
     assert by_name["Sanitise Status"].native_value == "W.CLN"
     assert by_name["Sanitise Countdown"].native_value == "19:48"

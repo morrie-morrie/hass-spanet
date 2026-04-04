@@ -110,6 +110,9 @@ async def test_sleep_timer_services_are_registered_and_forward_to_coordinator():
         async def delete_sleep_timer(self, timer_id):
             calls.append(("delete", timer_id))
 
+        async def set_spa_datetime(self, value):
+            calls.append(("datetime", value))
+
     hass = SimpleNamespace(
         data={const.DOMAIN: {"entry-1": {"coordinators": [_Coordinator()]}}},
         services=_Services(),
@@ -149,6 +152,11 @@ async def test_sleep_timer_services_are_registered_and_forward_to_coordinator():
         services_module.SERVICE_DELETE_SLEEP_TIMER,
         {"spa_id": "1", "timer_id": 12},
     )
+    await hass.services.call(
+        const.DOMAIN,
+        services_module.SERVICE_SET_SPA_DATETIME,
+        {"spa_id": "1", "date_time": "05-04-2026 08:57"},
+    )
 
     assert calls[0] == (
         "create",
@@ -174,3 +182,4 @@ async def test_sleep_timer_services_are_registered_and_forward_to_coordinator():
         },
     )
     assert calls[2] == ("delete", 12)
+    assert calls[3] == ("datetime", "05-04-2026 08:57")

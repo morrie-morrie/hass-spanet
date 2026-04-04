@@ -141,6 +141,12 @@ class SpaPool:
     async def get_settings_details(self):
         return await self.client.get(f"/Settings/GetSettingsDetails?deviceId={self.id}")
 
+    async def get_datetime(self):
+        return await self.client.get(f"/Settings/DateTime/{self.id}", requires_json=False)
+
+    async def set_datetime(self, value: str):
+        return await self.client.put(f"/Settings/DateTime/{self.id}", {"dateTime": value})
+
     async def set_power_save(self, mode: int):
         return await self.client.put(
             f"/Settings/PowerSave/{self.id}",

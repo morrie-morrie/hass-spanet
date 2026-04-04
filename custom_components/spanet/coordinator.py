@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TypedDict, cast
 
 import async_timeout
@@ -35,6 +35,7 @@ from .const import (
     SK_PUMPS,
     SK_SANITISE,
     SK_SANITISE_COUNTDOWN,
+    SK_SPA_DATETIME,
     SK_SANITISE_STATUS,
     SK_SANITISE_TIME,
     SK_SETTINGS_DETAILS,
@@ -415,6 +416,14 @@ class Coordinator(DataUpdateCoordinator):
         self.queue_settings_refresh()
         self._publish_local_state()
 
+    async def set_spa_datetime(self, value: str):
+        await self.spa.set_datetime(value)
+        self.queue_settings_refresh()
+        self._publish_local_state()
+
+    async def sync_spa_datetime(self):
+        await self.set_spa_datetime(datetime.now().astimezone().strftime("%d-%m-%Y %H:%M"))
+
     async def set_element_boost(self, value: str):
         if not self.state.get(SK_ELEMENT_BOOST_SUPPORTED, False):
             logger.warning("Element Boost not supported for spa %s", self.spa_id)
@@ -644,6 +653,12 @@ class Coordinator(DataUpdateCoordinator):
 
         sanitise_time = await self.spa.get_sanitise_time()
         self.state[SK_SANITISE_TIME] = extract_time_string(sanitise_time)
+
+        try:
+            spa_datetime = await self.spa.get_datetime()
+            self.state[SK_SPA_DATETIME] = str(spa_datetime).strip() or None
+        except Exception:
+            self.state.setdefault(SK_SPA_DATETIME, None)
 
         try:
             sleep_timers = await self.spa.get_sleep_timer()
