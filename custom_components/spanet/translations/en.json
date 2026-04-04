@@ -46,11 +46,11 @@
     "services": {
         "set_light_mode": {
             "name": "Set Light Mode",
-            "description": "Set light mode using a raw mode string."
+            "description": "Set light mode using a raw SpaNET mode string such as colour, fade, step, or party."
         },
         "set_light_colour": {
             "name": "Set Light Colour",
-            "description": "Set light colour using a raw colour string."
+            "description": "Set light colour using a raw SpaNET colour string such as white, blue, green, lime, teal, pink, red, or orange."
         },
         "set_light_speed": {
             "name": "Set Light Speed",

@@ -35,12 +35,6 @@ HEAT_PUMP_API_BY_LABEL = {
 }
 HEAT_PUMP_OPTIONS = ["Heat", "Cool", "Off"]
 
-PUMP_STATE_TO_API = {
-    "on": {"modeId": 4, "pumpVariableSpeed": 0},
-    "off": {"modeId": 2, "pumpVariableSpeed": 0},
-    "auto": {"modeId": 3, "pumpVariableSpeed": 0},
-}
-
 STANDARD_PUMP_STATE_TO_API = {
     "on": {"modeId": 1, "pumpVariableSpeed": 0},
     "off": {"modeId": 2, "pumpVariableSpeed": 0},

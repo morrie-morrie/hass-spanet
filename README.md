@@ -10,6 +10,9 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 
 [![Open your Home Assistant instance and open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=morrie-morrie&repository=hass-spanet&category=Integration)
 
+Endpoint reference:
+- [API_REFERENCE.md](C:\Scripts\C#\hass-spanet-morrie\API_REFERENCE.md)
+
 ## Features
 
 - Climate control for spa set temperature
@@ -80,6 +83,11 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - `Light` is exposed as a native HA `light` entity
 - Advanced light mode, colour, and speed control are exposed via services
+- The app-confirmed light contract includes:
+  - on/off via `PUT /api/Lights/SetLightStatus/{lightId}` with `{ "deviceId": "...", "on": true|false }`
+  - mode strings such as `colour`, `fade`, `step`, and `party`
+  - colour strings such as `white`, `blue`, `green`, `lime`, `teal`, `pink`, `red`, and `orange`
+  - brightness and speed values on a `1..5` scale
 
 ### Sanitise
 
@@ -109,6 +117,10 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Cloud Connected` reports whether SpaNET cloud is returning live device data
 - If SpaNET returns `Device Offline`, entities will become unavailable while the integration backs off polling
 - That state indicates cloud/device reachability, not a broken integration install
+- Filtration follows the dedicated REST contract:
+  - `totalRuntime` -> `Filtration Runtime`
+  - `inBetweenCycles` -> `Filtration Cycle Gap`
+  - app summary strings such as `4 | 3` therefore mean `Runtime 4`, `Cycle Gap 3`
 
 ### App settings summary
 
@@ -173,7 +185,7 @@ Set light animation mode:
 service: spanet.set_light_mode
 data:
   spa_id: "12345"
-  mode: Party
+  mode: party
 ```
 
 Set light colour:
@@ -223,13 +235,13 @@ data:
   - `speed`
 
 `set_light_mode`
-- Sets a raw SpaNET light mode string such as `Single`, `Fade`, `Step`, or `Party`
+- Sets a raw SpaNET light mode string such as `colour`, `fade`, `step`, or `party`
 - Fields:
   - `spa_id`
   - `mode`
 
 `set_light_colour`
-- Sets a raw SpaNET light colour string
+- Sets a raw SpaNET light colour string such as `white`, `blue`, `green`, `lime`, `teal`, `pink`, `red`, or `orange`
 - Fields:
   - `spa_id`
   - `colour`

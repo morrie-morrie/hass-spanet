@@ -1,6 +1,6 @@
 set_light_mode:
   name: Set Light Mode
-  description: Set the light mode using a raw mode string supported by your spa controller.
+  description: Set the light mode using a raw SpaNET mode string such as colour, fade, step, or party.
   fields:
     spa_id:
       required: true
@@ -9,13 +9,13 @@ set_light_mode:
         text:
     mode:
       required: true
-      example: rainbow
+      example: colour
       selector:
         text:
 
 set_light_colour:
   name: Set Light Colour
-  description: Set the light colour using a raw colour string supported by your spa controller.
+  description: Set the light colour using a raw SpaNET colour string such as white, blue, green, lime, teal, pink, red, or orange.
   fields:
     spa_id:
       required: true

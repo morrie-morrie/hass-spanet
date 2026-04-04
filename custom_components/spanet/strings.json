@@ -45,7 +45,7 @@
   "services": {
     "set_light_mode": {
       "name": "Set Light Mode",
-      "description": "Set light mode using a raw mode string.",
+      "description": "Set light mode using a raw SpaNET mode string such as colour, fade, step, or party.",
       "fields": {
         "spa_id": {
           "name": "Spa Id"
@@ -57,7 +57,7 @@
     },
     "set_light_colour": {
       "name": "Set Light Colour",
-      "description": "Set light colour using a raw colour string.",
+      "description": "Set light colour using a raw SpaNET colour string such as white, blue, green, lime, teal, pink, red, or orange.",
       "fields": {
         "spa_id": {
           "name": "Spa Id"

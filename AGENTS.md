@@ -16,6 +16,7 @@ Use this file as the local instruction set for future AI-assisted edits in this 
   - `python -m compileall custom_components/spanet tests`
   - `python -m pytest -q`
 - When documentation or behavior changes, update `README.md`
+- When endpoint contracts are clarified, update `API_REFERENCE.md`
 - When shipping a change intended for users, update `custom_components/spanet/manifest.json` version
 
 ## Home Assistant quality target
@@ -53,6 +54,7 @@ Keep the Home Assistant device page intentionally simple.
 - Lights are exposed through the native `light` entity
 - Schedules and stable settings should prefer native HA entities
 - Advanced behavior should prefer services over extra select/number entities where possible
+- Light services should follow raw app mode/colour strings where the cloud API already uses them, for example `colour`, `fade`, `step`, `party`, and colours like `white`, `blue`, `green`, `lime`, `teal`, `pink`, `red`, and `orange`
 
 ### Advanced controls
 
@@ -86,6 +88,9 @@ Examples:
 - unsupported controls should not be forced into the UI
 - when an option is config-gated, preserve that gate unless intentionally changing product behavior
 - `Settings/GetSettingsDetails` is a secondary summary source for diagnostics/app parity, not the primary source of truth for writable settings
+- Filtration mapping follows the dedicated endpoint contract:
+  - `totalRuntime` -> `Filtration Runtime`
+  - `inBetweenCycles` -> `Filtration Cycle Gap`
 
 ### Heat pump option
 

@@ -196,15 +196,39 @@ async def test_set_sanitise_status_uses_body_payload():
 
 
 @pytest.mark.asyncio
+async def test_set_sanitise_status_stop_uses_body_payload():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_sanitise_status(False)
+
+    _, path, payload = client.calls[-1]
+    assert path == "/Settings/SanitiseStatus/99"
+    assert payload == {"on": False}
+
+
+@pytest.mark.asyncio
 async def test_set_light_mode_payload():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
 
-    await pool.set_light_mode(7, "rainbow")
+    await pool.set_light_mode(7, "colour")
 
     _, path, payload = client.calls[-1]
     assert path == "/Lights/SetLightMode/7"
-    assert payload == {"deviceId": 99, "mode": "rainbow"}
+    assert payload == {"deviceId": 99, "mode": "colour"}
+
+
+@pytest.mark.asyncio
+async def test_set_light_status_payload_matches_app_contract():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_light_status(7, True)
+
+    _, path, payload = client.calls[-1]
+    assert path == "/Lights/SetLightStatus/7"
+    assert payload == {"deviceId": 99, "on": True}
 
 
 @pytest.mark.asyncio
@@ -288,7 +312,7 @@ async def test_set_pump_on_payload_uses_live_confirmed_mode_id():
 
     _, path, payload = client.calls[-1]
     assert path == "/PumpsAndBlower/SetPump/7"
-    assert payload == {"deviceId": 99, "modeId": 4, "pumpVariableSpeed": 0}
+    assert payload == {"deviceId": 99, "modeId": 1, "pumpVariableSpeed": 0}
 
 
 @pytest.mark.asyncio

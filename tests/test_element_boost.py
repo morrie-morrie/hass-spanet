@@ -423,6 +423,7 @@ async def test_update_pumps_ignores_circulation_pump_and_uses_blower_variable_sp
 
     assert "-1" not in coordinator.state[const.SK_PUMPS]
     assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "off"
+    assert coordinator.state[const.SK_BLOWER]["state"] == "off"
     assert coordinator.state[const.SK_BLOWER]["speed"] == 5
 
 
@@ -457,6 +458,35 @@ async def test_update_pumps_treats_vari_status_as_on():
     await coordinator.update_pumps()
 
     assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "on"
+
+
+@pytest.mark.asyncio
+async def test_update_pumps_normalizes_blower_vari_status_to_variable():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.state = {}
+
+    async def _get_pumps():
+        return {
+            "pumpAndBlower": {
+                "pumps": [],
+                "blower": {
+                    "id": 13,
+                    "blowerStatus": "vari",
+                    "blowerVariableSpeed": 3,
+                },
+            }
+        }
+
+    coordinator.spa = SimpleNamespace(get_pumps=_get_pumps)
+    await coordinator.update_pumps()
+
+    assert coordinator.state[const.SK_BLOWER]["state"] == "variable"
+    assert coordinator.state[const.SK_BLOWER]["speed"] == 3
 
 
 @pytest.mark.asyncio
@@ -543,8 +573,36 @@ async def test_update_lights_normalizes_lowercase_animation_modes():
     await coordinator.update_lights()
 
     assert coordinator.state[const.SK_LIGHTS]["mode"] == "Fade"
-    assert coordinator.state[const.SK_LIGHT_PROFILE] == "Animated"
-    assert coordinator.state[const.SK_LIGHT_ANIMATION] == "Fade"
+
+
+@pytest.mark.asyncio
+async def test_update_lights_treats_colour_mode_as_single_profile():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=None,
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+    coordinator.state = {}
+
+    async def _get_light_details():
+        return {
+            "lightId": 6156,
+            "lightMode": "colour",
+            "lightColour": "pink",
+            "lightBrightness": 1,
+            "lightSpeed": 1,
+            "lightOn": True,
+        }
+
+    coordinator.spa = SimpleNamespace(get_light_details=_get_light_details)
+    await coordinator.update_lights()
+
+    assert coordinator.state[const.SK_LIGHTS]["mode"] == "colour"
+    assert coordinator.state[const.SK_LIGHTS]["colour"] == "pink"
+    assert coordinator.state[const.SK_LIGHTS]["brightness"] == 1
+    assert coordinator.state[const.SK_LIGHTS]["speed"] == 1
+    assert coordinator.state[const.SK_LIGHTS]["state"] == "on"
 
 
 @pytest.mark.asyncio

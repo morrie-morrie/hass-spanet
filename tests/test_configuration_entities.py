@@ -120,8 +120,8 @@ class _Coordinator:
             const.SK_OPERATION_MODE: "Normal",
             const.SK_POWER_SAVE: "High",
             const.SK_HEAT_PUMP: "Heat",
-            const.SK_FILTRATION_CYCLE: 12,
-            const.SK_FILTRATION_RUNTIME: 3,
+            const.SK_FILTRATION_CYCLE: 3,
+            const.SK_FILTRATION_RUNTIME: 4,
             const.SK_TIMEOUT: 20,
             const.SK_SLEEP_TIMERS: {
                 "1": {"dayProfile": "Every Day"},
@@ -178,8 +178,8 @@ async def test_configuration_values_are_selects_not_numbers():
     assert by_name["Filtration Cycle Gap"].options == [str(value) for value in range(1, 25)]
     assert by_name["Filtration Runtime"].options == ["1", "2", "3", "4", "6", "8", "12", "24"]
     assert by_name["Timeout"].options == [str(value) for value in range(1, 61)]
-    assert by_name["Filtration Cycle Gap"].current_option == "12"
-    assert by_name["Filtration Runtime"].current_option == "3"
+    assert by_name["Filtration Runtime"].current_option == "4"
+    assert by_name["Filtration Cycle Gap"].current_option == "3"
     assert by_name["Timeout"].current_option == "20"
 
 

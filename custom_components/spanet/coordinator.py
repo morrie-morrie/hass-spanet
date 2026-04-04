@@ -7,7 +7,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api_mappings import (
     CIRCULATION_PUMP_STATE_TO_API,
-    LIGHT_ANIMATION_OPTIONS,
     OPERATION_MODE_OPTIONS,
     PUMP_ONE_STATE_TO_API,
     PUMP_SELECT_OPTIONS,
@@ -30,8 +29,6 @@ from .const import (
     SK_HEATER,
     SK_HEAT_PUMP,
     SK_LIGHTS,
-    SK_LIGHT_ANIMATION,
-    SK_LIGHT_PROFILE,
     SK_OPERATION_MODE,
     SK_POWER_SAVE,
     SK_PUMPS,
@@ -539,13 +536,6 @@ class Coordinator(DataUpdateCoordinator):
             "mode": mode,
             "colour": light_details.get("colour", light_details.get("lightColour")),
         }
-        mode = str(self.state[SK_LIGHTS].get("mode") or "")
-        if mode in LIGHT_ANIMATION_OPTIONS:
-            self.state[SK_LIGHT_PROFILE] = "Animated"
-            self.state[SK_LIGHT_ANIMATION] = mode
-        else:
-            self.state[SK_LIGHT_PROFILE] = "Single"
-            self.state[SK_LIGHT_ANIMATION] = "Fade"
 
     async def update_settings(self):
         try:

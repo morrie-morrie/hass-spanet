@@ -90,13 +90,13 @@ class _Spa:
             "powersaveMode": "HIGH",
             "sanitiseTime": "14:00",
             "timeout": "20",
-            "filtration": "12 | 3",
+            "filtration": "4 | 3",
             "showRunTimers": False,
             "sleepTimers": "2",
         }
 
     async def get_filtration(self):
-        return {"totalRuntime": 3, "inBetweenCycles": 12}
+        return {"totalRuntime": 4, "inBetweenCycles": 3}
 
     async def get_timeout(self):
         return 20
@@ -246,7 +246,9 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["show"] is False
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["allowHeating"] is False
     assert coordinator.state[const.SK_SETTINGS_DETAILS]["operationMode"] == "ECON"
-    assert coordinator.state[const.SK_SETTINGS_DETAILS]["filtration"] == "12 | 3"
+    assert coordinator.state[const.SK_FILTRATION_RUNTIME] == 4
+    assert coordinator.state[const.SK_FILTRATION_CYCLE] == 3
+    assert coordinator.state[const.SK_SETTINGS_DETAILS]["filtration"] == "4 | 3"
 
 
 @pytest.mark.asyncio

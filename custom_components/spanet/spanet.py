@@ -10,13 +10,13 @@ try:
     from .api_mappings import (
         BLOWER_STATE_TO_API,
         HEAT_PUMP_API_BY_LABEL,
-        PUMP_STATE_TO_API,
+        STANDARD_PUMP_STATE_TO_API,
     )
 except ImportError:
     from api_mappings import (  # type: ignore
         BLOWER_STATE_TO_API,
         HEAT_PUMP_API_BY_LABEL,
-        PUMP_STATE_TO_API,
+        STANDARD_PUMP_STATE_TO_API,
     )
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ class SpaPool:
 
     async def set_pump(self, pump_id: str, state: str, state_map: dict | None = None):
         state = str(state).lower()
-        mapping = state_map or PUMP_STATE_TO_API
+        mapping = state_map or STANDARD_PUMP_STATE_TO_API
         payload = mapping.get(state)
         if payload is None:
             logger.warning("Unknown modeId for pump state %s", state)
