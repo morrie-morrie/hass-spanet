@@ -283,12 +283,7 @@ async def test_live_derived_pump_role_mappings_are_pinned():
     await pool.set_pump("8", "on", api_mappings.PUMP_ONE_STATE_TO_API)
     _, path, payload = client.calls[-1]
     assert path == "/PumpsAndBlower/SetPump/8"
-    assert payload == {"deviceId": 99, "modeId": 4, "pumpVariableSpeed": 0}
-
-    await pool.set_pump("8", "auto", api_mappings.PUMP_ONE_STATE_TO_API)
-    _, path, payload = client.calls[-1]
-    assert path == "/PumpsAndBlower/SetPump/8"
-    assert payload == {"deviceId": 99, "modeId": 3, "pumpVariableSpeed": 0}
+    assert payload == {"deviceId": 99, "modeId": 1, "pumpVariableSpeed": 0}
 
     await pool.set_pump("9", "on", api_mappings.STANDARD_PUMP_STATE_TO_API)
     _, path, payload = client.calls[-1]

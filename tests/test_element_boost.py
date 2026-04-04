@@ -512,8 +512,8 @@ async def test_update_pumps_models_pump_a_and_pump_one_separately():
     assert coordinator.state[const.SK_PUMPS]["A"]["supportedStates"] == ["off", "auto", "on"]
     assert coordinator.state[const.SK_PUMPS]["A"]["state"] == "auto"
 
-    assert coordinator.state[const.SK_PUMPS]["1"]["supportedStates"] == ["off", "auto", "on"]
-    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "auto"
+    assert coordinator.state[const.SK_PUMPS]["1"]["supportedStates"] == ["off", "on"]
+    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "on"
 
     assert coordinator.state[const.SK_PUMPS]["2"]["supportedStates"] == ["off", "on"]
     assert coordinator.state[const.SK_PUMPS]["2"]["state"] == "on"

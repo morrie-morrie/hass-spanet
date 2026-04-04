@@ -237,11 +237,11 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
                 },
                 "1": {
                     "hasSwitch": True,
-                    "auto": True,
+                    "auto": False,
                     "speeds": 1,
-                    "state": "auto",
+                    "state": "off",
                     "displayName": "Pump 1",
-                    "supportedStates": ["off", "auto", "on"],
+                    "supportedStates": ["off", "on"],
                 },
                 "2": {"hasSwitch": True, "auto": False, "speeds": 1, "state": "off", "displayName": "Pump 2"},
             },
@@ -262,9 +262,9 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
     pump_selects = [entity for entity in created_selects if entity._attr_name.startswith("Pump")]
     pump_switches = [entity for entity in created_switches if entity._attr_name.startswith("Pump")]
 
-    assert [entity._attr_name for entity in pump_selects] == ["Pump A", "Pump 1"]
-    assert all(entity.options == ["off", "auto", "on"] for entity in pump_selects)
-    assert [entity._attr_name for entity in pump_switches] == ["Pump 2"]
+    assert [entity._attr_name for entity in pump_selects] == ["Pump A"]
+    assert pump_selects[0].options == ["off", "auto", "on"]
+    assert [entity._attr_name for entity in pump_switches] == ["Pump 1", "Pump 2"]
 
 
 @pytest.mark.asyncio

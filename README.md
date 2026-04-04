@@ -18,8 +18,8 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
   - `Pump A` is exposed as a `select`: `off / auto / on`
-  - `Pump 1` is exposed as a `select`: `off / auto / on`
-  - `Pump 2` is exposed as a `switch` on the current observed spa model
+  - `Pump 1` is exposed as a `switch`
+  - `Pump 2` is exposed as a `switch`
 - Blower control as:
   - `Blower Mode` select: `off / ramp / variable`
   - `Blower Variable Speed` numeric control `1-5` when mode is `variable`
@@ -57,8 +57,8 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - Pumps are created from the live `PumpsAndBlower/Get` response
 - `Pump A` is derived from the circulation pump and is exposed as a `select` with `off / auto / on`
-- `Pump 1` is exposed as a `select` with `off / auto / on`
-- `Pump 2` is exposed as a `switch` on the current observed spa model
+- `Pump 1` is exposed as a `switch`
+- `Pump 2` is exposed as a `switch`
 - Pump mappings are role-specific and based on live observed API behavior, not one shared pump-mode assumption
 - Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
@@ -67,6 +67,7 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Blower Mode` is exposed as a `select` with `off / ramp / variable`
 - `Blower Variable Speed` is exposed as a numeric control `1-5`
 - `Blower Variable Speed` is only active when `Blower Mode` is `variable`
+- The blower is modeled separately from the pump switches even if it changes the swim-pump characteristics on the spa
 - Advanced blower control remains available through services for automations and scripts
 
 ### Lights

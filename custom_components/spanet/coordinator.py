@@ -452,9 +452,11 @@ class Coordinator(DataUpdateCoordinator):
                 pumps[pump_id] = {}
             pump = pumps[pump_id]
             raw_state = str(p.get("pumpStatus", "off")).lower()
-            has_auto = bool(p.get("hasAuto", False)) or pump_number == 1
+            has_auto = bool(p.get("hasAuto", False))
             if raw_state == "auto" and (is_circ or has_auto):
                 normalized_state = "auto"
+            elif pump_number == 1 and raw_state == "auto":
+                normalized_state = "on"
             elif raw_state in {"on", "high", "low", "1", "vari", "variable"}:
                 normalized_state = "on"
             else:
@@ -469,7 +471,7 @@ class Coordinator(DataUpdateCoordinator):
                 pump["supportedStates"] = PUMP_SELECT_OPTIONS
                 pump["stateMap"] = CIRCULATION_PUMP_STATE_TO_API
             elif pump_number == 1:
-                pump["supportedStates"] = PUMP_SELECT_OPTIONS
+                pump["supportedStates"] = ["off", "on"]
                 pump["stateMap"] = PUMP_ONE_STATE_TO_API
             else:
                 pump["supportedStates"] = ["off", "on"] if not pump["auto"] else PUMP_SELECT_OPTIONS
