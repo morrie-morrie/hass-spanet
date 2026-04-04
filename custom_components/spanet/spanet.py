@@ -137,15 +137,18 @@ class SpaPool:
         match = next((t for t in timer if int(t.get("id")) == int(timer_id)), None)
         if match is None:
             raise SpaNetException(f"Sleep timer {timer_id} not found")
-        return await self.update_sleep_timer(
-            timer_id=int(timer_id),
-            timer_number=int(match.get("timerNumber")),
-            timer_name=str(match.get("timerName")),
-            start_time=str(match.get("startTime")),
-            end_time=str(match.get("endTime")),
-            days_hex=str(match.get("daysHex")),
-            is_enabled=enabled,
-        )
+        update_kwargs = {
+            "timer_id": int(timer_id),
+            "timer_number": int(match.get("timerNumber")),
+            "timer_name": str(match.get("timerName")),
+            "start_time": str(match.get("startTime")),
+            "end_time": str(match.get("endTime")),
+            "days_hex": str(match.get("daysHex")),
+            "is_enabled": enabled,
+        }
+        # Live SpaNET behavior: enable-only timer updates are ignored on the first request.
+        await self.update_sleep_timer(**update_kwargs)
+        return await self.update_sleep_timer(**update_kwargs)
 
     async def create_sleep_timer(
         self,

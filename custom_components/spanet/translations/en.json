@@ -58,23 +58,23 @@
         },
         "set_blower_mode": {
             "name": "Set Blower Mode",
-            "description": "Set blower mode."
+            "description": "Set blower mode to off, ramp, or variable."
         },
         "set_blower_speed": {
             "name": "Set Blower Speed",
-            "description": "Set blower speed from 1 to 5."
+            "description": "Set blower variable speed from 1 to 5."
         },
         "create_sleep_timer": {
             "name": "Create Sleep Timer",
-            "description": "Create a sleep timer."
+            "description": "Create a sleep timer profile using raw SpaNET timer fields."
         },
         "update_sleep_timer": {
             "name": "Update Sleep Timer",
-            "description": "Update an existing sleep timer."
+            "description": "Update an existing sleep timer profile using raw SpaNET timer fields."
         },
         "delete_sleep_timer": {
             "name": "Delete Sleep Timer",
-            "description": "Delete an existing sleep timer."
+            "description": "Delete an existing sleep timer profile by timer id."
         }
     }
 }

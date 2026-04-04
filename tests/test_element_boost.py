@@ -329,60 +329,6 @@ async def test_update_information_sets_element_boost_capability_supported_and_un
 
 
 @pytest.mark.asyncio
-async def test_set_light_profile_single_keeps_last_animation_value():
-    calls = []
-
-    async def _set_light_mode(_light_id, mode):
-        calls.append(mode)
-
-    coordinator = coordinator_module.Coordinator(
-        hass=SimpleNamespace(),
-        spanet=None,
-        spa_config={"id": "1", "name": "Spa"},
-        config_entry=SimpleNamespace(options={}),
-    )
-    coordinator.spa = SimpleNamespace(set_light_mode=_set_light_mode)
-    coordinator.state = {
-        const.SK_LIGHTS: {"apiId": 7, "mode": "Step"},
-        const.SK_LIGHT_PROFILE: "Animated",
-        const.SK_LIGHT_ANIMATION: "Step",
-    }
-
-    await coordinator.set_light_profile("Single")
-
-    assert calls == ["Single"]
-    assert coordinator.state[const.SK_LIGHT_PROFILE] == "Single"
-    assert coordinator.state[const.SK_LIGHT_ANIMATION] == "Step"
-
-
-@pytest.mark.asyncio
-async def test_set_light_profile_animated_defaults_to_fade_when_missing_animation():
-    calls = []
-
-    async def _set_light_mode(_light_id, mode):
-        calls.append(mode)
-
-    coordinator = coordinator_module.Coordinator(
-        hass=SimpleNamespace(),
-        spanet=None,
-        spa_config={"id": "1", "name": "Spa"},
-        config_entry=SimpleNamespace(options={}),
-    )
-    coordinator.spa = SimpleNamespace(set_light_mode=_set_light_mode)
-    coordinator.state = {
-        const.SK_LIGHTS: {"apiId": 7, "mode": "Single"},
-        const.SK_LIGHT_PROFILE: "Single",
-        const.SK_LIGHT_ANIMATION: "Unknown",
-    }
-
-    await coordinator.set_light_profile("Animated")
-
-    assert calls == ["Fade"]
-    assert coordinator.state[const.SK_LIGHT_PROFILE] == "Animated"
-    assert coordinator.state[const.SK_LIGHT_ANIMATION] == "Fade"
-
-
-@pytest.mark.asyncio
 async def test_update_pumps_keeps_runtime_capability_driven_entities():
     coordinator = coordinator_module.Coordinator(
         hass=SimpleNamespace(),
@@ -566,8 +512,8 @@ async def test_update_pumps_models_pump_a_and_pump_one_separately():
     assert coordinator.state[const.SK_PUMPS]["A"]["supportedStates"] == ["off", "auto", "on"]
     assert coordinator.state[const.SK_PUMPS]["A"]["state"] == "auto"
 
-    assert coordinator.state[const.SK_PUMPS]["1"]["supportedStates"] == ["off", "on"]
-    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "on"
+    assert coordinator.state[const.SK_PUMPS]["1"]["supportedStates"] == ["off", "auto", "on"]
+    assert coordinator.state[const.SK_PUMPS]["1"]["state"] == "auto"
 
     assert coordinator.state[const.SK_PUMPS]["2"]["supportedStates"] == ["off", "on"]
     assert coordinator.state[const.SK_PUMPS]["2"]["state"] == "on"

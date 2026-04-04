@@ -197,6 +197,8 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["state"] == "off"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["dayProfile"] == "Every Day"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["dayProfile"] == "Weekends"
+    assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["show"] is False
+    assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["allowHeating"] is False
 
 
 @pytest.mark.asyncio

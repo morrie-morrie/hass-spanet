@@ -187,27 +187,6 @@ class Coordinator(DataUpdateCoordinator):
         self.queue_lights_refresh()
         self._publish_local_state()
 
-    async def set_light_profile(self, profile: str):
-        if profile not in {"Single", "Animated"}:
-            return
-        if profile == "Single":
-            await self.set_light_mode("Single")
-            self.state[SK_LIGHT_PROFILE] = "Single"
-            return
-
-        current_animation = self.state.get(SK_LIGHT_ANIMATION)
-        mode = current_animation if current_animation in LIGHT_ANIMATION_OPTIONS else "Fade"
-        await self.set_light_mode(mode)
-        self.state[SK_LIGHT_PROFILE] = "Animated"
-        self.state[SK_LIGHT_ANIMATION] = mode
-
-    async def set_light_animation(self, animation: str):
-        if animation not in LIGHT_ANIMATION_OPTIONS:
-            return
-        await self.set_light_mode(animation)
-        self.state[SK_LIGHT_PROFILE] = "Animated"
-        self.state[SK_LIGHT_ANIMATION] = animation
-
     async def set_light_colour(self, colour: str):
         lights = self.get_state(SK_LIGHTS)
         lights["colour"] = colour
@@ -385,10 +364,6 @@ class Coordinator(DataUpdateCoordinator):
         self.tasks[1].trigger(0)
         self._publish_local_state()
 
-    async def set_blower_switch(self, value: str):
-        target_state = "off" if str(value).lower() == "off" else "variable"
-        await self.set_blower(target_state)
-
     async def set_blower_speed(self, value: int):
         blower = self.get_state(SK_BLOWER)
         blower["speed"] = max(1, min(5, int(value)))
@@ -477,11 +452,9 @@ class Coordinator(DataUpdateCoordinator):
                 pumps[pump_id] = {}
             pump = pumps[pump_id]
             raw_state = str(p.get("pumpStatus", "off")).lower()
-            has_auto = bool(p.get("hasAuto", False))
+            has_auto = bool(p.get("hasAuto", False)) or pump_number == 1
             if raw_state == "auto" and (is_circ or has_auto):
                 normalized_state = "auto"
-            elif not is_circ and pump_number == 1 and not has_auto and raw_state == "auto":
-                normalized_state = "on"
             elif raw_state in {"on", "high", "low", "1", "vari", "variable"}:
                 normalized_state = "on"
             else:
@@ -495,8 +468,8 @@ class Coordinator(DataUpdateCoordinator):
             if is_circ:
                 pump["supportedStates"] = PUMP_SELECT_OPTIONS
                 pump["stateMap"] = CIRCULATION_PUMP_STATE_TO_API
-            elif pump_number == 1 and not has_auto:
-                pump["supportedStates"] = ["off", "on"]
+            elif pump_number == 1:
+                pump["supportedStates"] = PUMP_SELECT_OPTIONS
                 pump["stateMap"] = PUMP_ONE_STATE_TO_API
             else:
                 pump["supportedStates"] = ["off", "on"] if not pump["auto"] else PUMP_SELECT_OPTIONS
@@ -590,6 +563,8 @@ class Coordinator(DataUpdateCoordinator):
                 "dayProfile": self._timer_day_profile_from_hex(str(t.get("daysHex", ""))),
                 "isEnabled": bool(t.get("isEnabled")),
                 "state": "on" if t.get("isEnabled") else "off",
+                "show": bool(t.get("show", False)),
+                "allowHeating": bool(t.get("allowHeating", False)),
             }
         self.state[SK_SLEEP_TIMERS] = timers
 
@@ -611,15 +586,6 @@ class Coordinator(DataUpdateCoordinator):
                 self.state[SK_HEAT_PUMP] = heat_pump_from_api(heat_pump.get("mode"))
             except (TypeError, ValueError, AttributeError):
                 self.state[SK_HEAT_PUMP] = "Off"
-
-    @staticmethod
-    def fuzzy_find(modes, mode):
-        if mode is None:
-            return None
-        for m in modes:
-            if m.lower().startswith(str(mode).lower()):
-                return m
-        return None
 
     @staticmethod
     def _timer_day_profile_from_hex(days_hex: str) -> str:

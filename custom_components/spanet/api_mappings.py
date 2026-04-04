@@ -23,13 +23,17 @@ POWER_SAVE_API_BY_LABEL = {label: api for api, label in POWER_SAVE_LABELS_BY_API
 POWER_SAVE_OPTIONS = list(POWER_SAVE_API_BY_LABEL)
 
 HEAT_PUMP_LABELS_BY_API = {
-    1: "Auto",
+    1: "Heat",
     2: "Heat",
     3: "Cool",
     4: "Off",
 }
-HEAT_PUMP_API_BY_LABEL = {label: api for api, label in HEAT_PUMP_LABELS_BY_API.items()}
-HEAT_PUMP_OPTIONS = list(HEAT_PUMP_API_BY_LABEL)
+HEAT_PUMP_API_BY_LABEL = {
+    "Heat": 2,
+    "Cool": 3,
+    "Off": 4,
+}
+HEAT_PUMP_OPTIONS = ["Heat", "Cool", "Off"]
 
 PUMP_STATE_TO_API = {
     "on": {"modeId": 4, "pumpVariableSpeed": 0},
@@ -44,8 +48,9 @@ STANDARD_PUMP_STATE_TO_API = {
 }
 
 PUMP_ONE_STATE_TO_API = {
-    "on": {"modeId": 3, "pumpVariableSpeed": 0},
+    "on": {"modeId": 4, "pumpVariableSpeed": 0},
     "off": {"modeId": 2, "pumpVariableSpeed": 0},
+    "auto": {"modeId": 3, "pumpVariableSpeed": 0},
 }
 
 CIRCULATION_PUMP_STATE_TO_API = {

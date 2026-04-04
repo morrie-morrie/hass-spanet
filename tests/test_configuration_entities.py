@@ -119,10 +119,14 @@ class _Coordinator:
         self.state = {
             const.SK_OPERATION_MODE: "Normal",
             const.SK_POWER_SAVE: "High",
+            const.SK_HEAT_PUMP: "Heat",
             const.SK_FILTRATION_CYCLE: 12,
             const.SK_FILTRATION_RUNTIME: 3,
             const.SK_TIMEOUT: 20,
-            const.SK_SLEEP_TIMERS: {},
+            const.SK_SLEEP_TIMERS: {
+                "1": {"dayProfile": "Every Day"},
+                "2": {"dayProfile": "Custom"},
+            },
         }
 
     def get_state(self, key, sub_key=None):
@@ -149,6 +153,12 @@ class _Coordinator:
     async def set_timeout(self, _value):
         return None
 
+    async def set_heat_pump(self, _value):
+        return None
+
+    async def set_sleep_timer_day_profile(self, _key, _value):
+        return None
+
 
 @pytest.mark.asyncio
 async def test_configuration_values_are_selects_not_numbers():
@@ -171,3 +181,36 @@ async def test_configuration_values_are_selects_not_numbers():
     assert by_name["Filtration Cycle Gap"].current_option == "12"
     assert by_name["Filtration Runtime"].current_option == "3"
     assert by_name["Timeout"].current_option == "20"
+
+
+@pytest.mark.asyncio
+async def test_heat_pump_select_uses_live_aligned_options():
+    coordinator = _Coordinator()
+    hass = SimpleNamespace(data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}})
+    config_entry = SimpleNamespace(entry_id="entry-1", options={"enable_heat_pump": True})
+
+    created_selects = []
+    await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
+
+    by_name = {entity._attr_name: entity for entity in created_selects}
+    assert by_name["Heat Pump"].options == ["Heat", "Cool", "Off"]
+    assert by_name["Heat Pump"].current_option == "Heat"
+
+
+@pytest.mark.asyncio
+async def test_sleep_timer_day_profile_only_shows_custom_when_current_state_is_custom():
+    coordinator = _Coordinator()
+    hass = SimpleNamespace(data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}})
+    config_entry = SimpleNamespace(entry_id="entry-1", options={})
+
+    created_selects = []
+    await select_module.async_setup_entry(hass, config_entry, created_selects.extend)
+
+    by_name = {entity._attr_name: entity for entity in created_selects}
+    timer_one = by_name["Sleep Timer 1 Days"]
+    timer_two = by_name["Sleep Timer 2 Days"]
+
+    assert timer_one.current_option == "Every Day"
+    assert "Custom" not in timer_one.options
+    assert timer_two.current_option == "Custom"
+    assert "Custom" in timer_two.options

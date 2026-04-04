@@ -168,16 +168,7 @@ class _Coordinator:
     async def set_blower(self, _value):
         return None
 
-    async def set_blower_switch(self, _value):
-        return None
-
     async def set_blower_speed(self, _value):
-        return None
-
-    async def set_light_profile(self, _value):
-        return None
-
-    async def set_light_animation(self, _value):
         return None
 
     async def set_operation_mode(self, _value):
@@ -244,7 +235,14 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
                     "displayName": "Pump A",
                     "supportedStates": ["off", "auto", "on"],
                 },
-                "1": {"hasSwitch": True, "auto": False, "speeds": 1, "state": "off", "displayName": "Pump 1"},
+                "1": {
+                    "hasSwitch": True,
+                    "auto": True,
+                    "speeds": 1,
+                    "state": "auto",
+                    "displayName": "Pump 1",
+                    "supportedStates": ["off", "auto", "on"],
+                },
                 "2": {"hasSwitch": True, "auto": False, "speeds": 1, "state": "off", "displayName": "Pump 2"},
             },
             const.SK_SLEEP_TIMERS: {},
@@ -264,9 +262,9 @@ async def test_pump_entities_follow_capabilities_without_duplicates():
     pump_selects = [entity for entity in created_selects if entity._attr_name.startswith("Pump")]
     pump_switches = [entity for entity in created_switches if entity._attr_name.startswith("Pump")]
 
-    assert [entity._attr_name for entity in pump_selects] == ["Pump A"]
-    assert pump_selects[0].options == ["off", "auto", "on"]
-    assert [entity._attr_name for entity in pump_switches] == ["Pump 1", "Pump 2"]
+    assert [entity._attr_name for entity in pump_selects] == ["Pump A", "Pump 1"]
+    assert all(entity.options == ["off", "auto", "on"] for entity in pump_selects)
+    assert [entity._attr_name for entity in pump_switches] == ["Pump 2"]
 
 
 @pytest.mark.asyncio

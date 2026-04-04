@@ -41,7 +41,8 @@ Keep the Home Assistant device page intentionally simple.
 
 - Pumps are capability-driven:
   - `Pump A` is derived from the circulation pump and uses a select: `off / auto / on`
-  - `Pump 1` and `Pump 2` are switch-based on the current observed spa model
+  - `Pump 1` uses a select: `off / auto / on`
+  - `Pump 2` remains switch-based on the current observed spa model
   - do not assume one shared pump mode mapping across all pumps; use live pump-role behavior
 - Blower is exposed as:
   - `Blower Mode` select: `off / ramp / variable`
@@ -88,6 +89,10 @@ Examples:
 - the `Heat Pump` select entity
 - the `Element Boost` switch
 
+For the observed SV3 cloud backend:
+- `Heat Pump` should use `Heat / Cool / Off`
+- do not assume `Auto` is a stable distinct cloud mode unless revalidated on a real spa
+
 Do not decouple these unless explicitly requested.
 
 ### Sanitise behavior
@@ -96,7 +101,14 @@ Sanitise is treated as an action-oriented behavior, not a true persistent switch
 
 - `Run Sanitise` is a button
 - `Sanitise Active` is a binary sensor sourced from live dashboard state
+- a successful trigger records a request with SpaNET cloud; actual running state is still determined by dashboard `sanitiseOn`
 - Do not expose sanitise as a toggleable switch
+
+### Sleep timer behavior
+
+- Sleep timer `Days` should only present writable named profiles
+- `Custom` should be surfaced as a derived/display state when the API returns a non-standard `daysHex`, not as a normal selectable preset
+- Sleep timer enable toggles currently require a duplicate full update because the live SpaNET backend ignores a single enable-only update
 
 ### Lock Mode
 

@@ -37,6 +37,15 @@ FILTRATION_RUNTIME_OPTIONS = [str(value) for value in (1, 2, 3, 4, 6, 8, 12, 24)
 TIMEOUT_OPTIONS = [str(value) for value in range(1, 61)]
 
 
+def _pump_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
+    key = str(item[0])
+    if key == "A":
+        return (-1, "A")
+    if key.isdigit():
+        return (0, f"{int(key):04d}")
+    return (1, key)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -119,7 +128,7 @@ async def async_setup_entry(
                 )
             )
 
-        for k, v in sorted(coordinator.state.get(SK_PUMPS, {}).items()):
+        for k, v in sorted(coordinator.state.get(SK_PUMPS, {}).items(), key=_pump_sort_key):
             if v.get("hasSwitch", False) and v.get("auto", False):
                 entities.append(
                     SpaSelect(
@@ -133,11 +142,11 @@ async def async_setup_entry(
 
         for k, _ in coordinator.state.get(SK_SLEEP_TIMERS, {}).items():
             entities.append(
-                SpaSelect(
+                SleepTimerDayProfileSelect(
                     coordinator,
                     f"Sleep Timer {k} Days",
                     f"{SK_SLEEP_TIMERS}.{k}.dayProfile",
-                    [*list(SLEEP_TIMER_DAY_PROFILES.keys()), "Custom"],
+                    list(SLEEP_TIMER_DAY_PROFILES.keys()),
                     partial(coordinator.set_sleep_timer_day_profile, k),
                     entity_category=EntityCategory.CONFIG,
                 )
@@ -204,3 +213,30 @@ class SpaNumericSelect(SpaSelect):
 
     async def async_select_option(self, option):
         await self._setter(int(option))
+
+
+class SleepTimerDayProfileSelect(SpaSelect):
+    """Sleep timer day profile selector.
+
+    Custom profiles are surfaced as current state when returned by the API,
+    but are not offered as a normal writable option.
+    """
+
+    @property
+    def options(self):
+        current = self.coordinator.get_state(self._state_key)
+        if current == "Custom":
+            return [*self._options, "Custom"]
+        return self._options
+
+    @property
+    def current_option(self):
+        value = self.coordinator.get_state(self._state_key)
+        if value == "Custom":
+            return "Custom"
+        return super().current_option
+
+    async def async_select_option(self, option):
+        if option == "Custom":
+            return
+        await super().async_select_option(option)

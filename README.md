@@ -18,7 +18,8 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
   - `Pump A` is exposed as a `select`: `off / auto / on`
-  - `Pump 1` and `Pump 2` are exposed as `switch` entities on the current observed spa model
+  - `Pump 1` is exposed as a `select`: `off / auto / on`
+  - `Pump 2` is exposed as a `switch` on the current observed spa model
 - Blower control as:
   - `Blower Mode` select: `off / ramp / variable`
   - `Blower Variable Speed` numeric control `1-5` when mode is `variable`
@@ -46,6 +47,7 @@ All spas on the account are discovered and added under the one config entry.
   - Enables the Heat Pump mode entity
   - Enables the Element Boost switch
   - If disabled, Heat Pump and Element Boost are not added
+  - On the observed SV3 backend, Heat Pump is exposed as `Heat / Cool / Off`; SpaNET does not preserve a distinct `Auto` mode through the cloud API
 
 ## Entity model
 
@@ -55,7 +57,8 @@ This fork prefers native Home Assistant entities where the API contract is clear
 
 - Pumps are created from the live `PumpsAndBlower/Get` response
 - `Pump A` is derived from the circulation pump and is exposed as a `select` with `off / auto / on`
-- `Pump 1` and `Pump 2` are exposed as `switch` entities on the current observed spa model
+- `Pump 1` is exposed as a `select` with `off / auto / on`
+- `Pump 2` is exposed as a `switch` on the current observed spa model
 - Pump mappings are role-specific and based on live observed API behavior, not one shared pump-mode assumption
 - Duplicate pump entities are intentionally avoided and stale retired pump entities are cleaned up on setup
 
@@ -78,6 +81,15 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Sanitise Start Time` is exposed as a native `time` entity
 - Sanitise is not modeled as a switch
 - A successful trigger records a sanitise request with SpaNET cloud; the active state is still governed by the live dashboard `sanitiseOn` status from the spa
+
+### Heat Pump / Element Boost
+
+- `Heat Pump` is gated by `Enable Heat Pump`
+- On the observed SV3 backend, the reliable cloud modes are:
+  - `Heat`
+  - `Cool`
+  - `Off`
+- `Element Boost` is a separate switch and was verified live to round-trip correctly
 
 ### Cloud/offline behavior
 
@@ -111,6 +123,7 @@ The device page is kept intentionally simple for non-schedule advanced controls:
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
 Sleep timer CRUD services remain available because the API supports timer lifecycle operations beyond the fixed entity model.
 The fixed timer entities map to timer slots `1` and `2`; `Custom` day profile is display-only when the API returns a non-standard `daysHex` value such as `FF`.
+Sleep timer enable toggles currently use a backend workaround because the SpaNET cloud API ignores a single enable-only update; the integration sends the same full update twice so Home Assistant and the cloud stay aligned.
 
 ### Common service examples
 
@@ -206,10 +219,10 @@ data:
   - `speed`
 
 `create_sleep_timer`
-- Creates a sleep timer profile
+- Creates a sleep timer profile using raw SpaNET timer fields
 
 `update_sleep_timer`
-- Updates an existing sleep timer profile
+- Updates an existing sleep timer profile using raw SpaNET timer fields
 
 `delete_sleep_timer`
 - Deletes an existing sleep timer profile
@@ -241,25 +254,25 @@ Example:
 
 ```powershell
 git add custom_components/spanet/manifest.json README.md
-git commit -m "Release 1.2.12"
+git commit -m "Release 1.2.14"
 git push origin main
 ```
 
-The workflow derives the tag from `manifest.json`, for example version `1.2.12` becomes tag `v1.2.12`.
+The workflow derives the tag from `manifest.json`, for example version `1.2.14` becomes tag `v1.2.14`.
 
 ### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
 - `tag`: the release tag, for example `v1.2.5`
-  - current example: `v1.2.12`
+  - current example: `v1.2.14`
 - `target`: the git ref to release from, default `main`
 
 Or push a matching tag directly:
 
 ```powershell
-git tag v1.2.12
-git push origin v1.2.12
+git tag v1.2.14
+git push origin v1.2.14
 ```
 
 The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.

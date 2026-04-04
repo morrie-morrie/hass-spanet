@@ -46,7 +46,7 @@ set_light_speed:
 
 set_blower_mode:
   name: Set Blower Mode
-  description: Set blower mode.
+  description: Set blower mode to off, ramp, or variable.
   fields:
     spa_id:
       required: true
@@ -63,7 +63,7 @@ set_blower_mode:
 
 set_blower_speed:
   name: Set Blower Speed
-  description: Set blower speed from 1 to 5.
+  description: Set blower variable speed from 1 to 5.
   fields:
     spa_id:
       required: true
@@ -78,7 +78,7 @@ set_blower_speed:
 
 create_sleep_timer:
   name: Create Sleep Timer
-  description: Create a sleep timer profile.
+  description: Create a sleep timer profile using raw SpaNET timer fields.
   fields:
     spa_id:
       required: true
@@ -114,7 +114,7 @@ create_sleep_timer:
 
 update_sleep_timer:
   name: Update Sleep Timer
-  description: Update a sleep timer profile.
+  description: Update an existing sleep timer profile using raw SpaNET timer fields.
   fields:
     spa_id:
       required: true

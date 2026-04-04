@@ -368,7 +368,18 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
     coordinator = SimpleNamespace(
         spa_id="1",
         spa_name="Spa",
-        state={"apiId": "123", "elementBoost": "off", "macAddress": "AA:BB"},
+        state={
+            "apiId": "123",
+            "elementBoost": "off",
+            "macAddress": "AA:BB",
+            "sleepTimers": {
+                "1": {
+                    "state": "on",
+                    "show": True,
+                    "allowHeating": False,
+                }
+            },
+        },
     )
     hass = SimpleNamespace(
         data={const.DOMAIN: {"entry-1": {"coordinators": [coordinator]}}},
@@ -380,6 +391,8 @@ async def test_diagnostics_redacts_sensitive_fields(monkeypatch):
     assert diagnostics["config_entry"]["data"]["password"] == "**REDACTED**"
     assert diagnostics["coordinators"][0]["state"]["apiId"] == "**REDACTED**"
     assert diagnostics["coordinators"][0]["state"]["macAddress"] == "**REDACTED**"
+    assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["show"] is True
+    assert diagnostics["coordinators"][0]["state"]["sleepTimers"]["1"]["allowHeating"] is False
     assert diagnostics["entities"] == ["switch.spa_pump1"]
 
 
