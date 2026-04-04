@@ -86,20 +86,11 @@ class _Spa:
     async def get_filtration(self):
         return {"totalRuntime": 3, "inBetweenCycles": 12}
 
-    async def get_lock_mode(self):
-        return 0
-
     async def get_timeout(self):
         return 20
 
     async def get_sanitise_time(self):
         return {"time": "08:30:00"}
-
-    async def get_date_time(self):
-        return "2026-04-03T14:05:00"
-
-    async def get_support_mode(self):
-        return "off"
 
     async def get_power_save(self):
         return {"mode": 3}

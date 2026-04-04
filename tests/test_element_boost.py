@@ -613,11 +613,8 @@ async def test_update_settings_prefers_authoritative_api_mode_endpoints():
 
     coordinator.spa = SimpleNamespace(
         get_filtration=lambda: {"totalRuntime": 3, "inBetweenCycles": 12},
-        get_lock_mode=lambda: 1,
         get_timeout=lambda: 30,
         get_sanitise_time=lambda: "08:30",
-        get_date_time=lambda: "2026-04-03 14:30:00",
-        get_support_mode=lambda: "off",
         get_power_save=lambda: {"mode": 2},
         get_operation_mode=lambda: 3,
         get_heat_pump=lambda: {"mode": 4},
@@ -628,11 +625,8 @@ async def test_update_settings_prefers_authoritative_api_mode_endpoints():
 
     coordinator.spa = SimpleNamespace(
         get_filtration=lambda: _awaitable({"totalRuntime": 3, "inBetweenCycles": 12}),
-        get_lock_mode=lambda: _awaitable(1),
         get_timeout=lambda: _awaitable(30),
         get_sanitise_time=lambda: _awaitable("08:30"),
-        get_date_time=lambda: _awaitable("2026-04-03 14:30:00"),
-        get_support_mode=lambda: _awaitable("off"),
         get_power_save=lambda: _awaitable({"mode": 2}),
         get_operation_mode=lambda: _awaitable(3),
         get_heat_pump=lambda: _awaitable({"mode": 4}),

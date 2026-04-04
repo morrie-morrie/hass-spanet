@@ -31,11 +31,6 @@ HEAT_PUMP_LABELS_BY_API = {
 HEAT_PUMP_API_BY_LABEL = {label: api for api, label in HEAT_PUMP_LABELS_BY_API.items()}
 HEAT_PUMP_OPTIONS = list(HEAT_PUMP_API_BY_LABEL)
 
-LOCK_MODE_LABELS_BY_API = {
-    0: "off",
-    1: "on",
-}
-
 PUMP_STATE_TO_API = {
     "on": {"modeId": 4, "pumpVariableSpeed": 0},
     "off": {"modeId": 2, "pumpVariableSpeed": 0},
@@ -95,14 +90,6 @@ def heat_pump_from_api(value: Any) -> str:
     if api_value is None:
         return "Off"
     return HEAT_PUMP_LABELS_BY_API.get(api_value, "Off")
-
-
-def lock_mode_from_api(value: Any) -> str:
-    api_value = _coerce_int(value)
-    if api_value is None:
-        return "off"
-    return LOCK_MODE_LABELS_BY_API.get(api_value, "off")
-
 
 def extract_time_string(value: Any) -> str | None:
     """Extract an HH:MM-style value from common SpaNET API payload shapes."""

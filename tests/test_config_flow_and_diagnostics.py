@@ -489,3 +489,8 @@ def test_legacy_sensor_binary_entries_are_identified_for_cleanup():
     assert init_module._is_retired_sensor_binary_entry(retired_pump) is True
     assert init_module._is_retired_sensor_binary_entry(retired_heater) is True
     assert init_module._is_retired_sensor_binary_entry(active_temp) is False
+
+
+def test_retired_entity_names_cover_old_date_time_variants():
+    assert "DateTime" in const.RETIRED_ENTITY_NAMES_BY_DOMAIN["datetime"]
+    assert "Date/Time" in const.RETIRED_ENTITY_NAMES_BY_DOMAIN["datetime"]

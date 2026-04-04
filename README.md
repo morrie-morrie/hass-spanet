@@ -13,12 +13,15 @@ Control a SpaNET spa from Home Assistant using the SpaNET cloud API.
 ## Features
 
 - Climate control for spa set temperature
+- Cloud connectivity binary sensor for SpaNET cloud reachability
 - Water temperature and set temperature sensors
 - Binary sensors for heater, sanitise active, sleeping, and pump run-state
 - Capability-driven pump control from `PumpsAndBlower/Get`
-  - auto-capable pumps are exposed as `select` entities: `off / auto / on`
-  - binary pumps are exposed as `switch` entities
-- Blower control as a simple switch entity on the device page
+  - `Pump A` is exposed as a `select`: `off / auto / on`
+  - `Pump 1` and `Pump 2` are exposed as `switch` entities on the current observed spa model
+- Blower control as:
+  - `Blower Mode` select: `off / ramp / variable`
+  - `Blower Variable Speed` numeric control `1-5` when mode is `variable`
 - Native light entity for everyday light control
 - Settings entities for:
   - Operation Mode
@@ -74,6 +77,13 @@ This fork prefers native Home Assistant entities where the API contract is clear
 - `Run Sanitise` is exposed as a button action
 - `Sanitise Start Time` is exposed as a native `time` entity
 - Sanitise is not modeled as a switch
+- A successful trigger records a sanitise request with SpaNET cloud; the active state is still governed by the live dashboard `sanitiseOn` status from the spa
+
+### Cloud/offline behavior
+
+- `Cloud Connected` reports whether SpaNET cloud is returning live device data
+- If SpaNET returns `Device Offline`, entities will become unavailable while the integration backs off polling
+- That state indicates cloud/device reachability, not a broken integration install
 
 ## Services
 
@@ -100,6 +110,7 @@ The device page is kept intentionally simple for non-schedule advanced controls:
 
 Advanced light and blower actions that would otherwise clutter the device page are exposed as services instead.
 Sleep timer CRUD services remain available because the API supports timer lifecycle operations beyond the fixed entity model.
+The fixed timer entities map to timer slots `1` and `2`; `Custom` day profile is display-only when the API returns a non-standard `daysHex` value such as `FF`.
 
 ### Common service examples
 
@@ -230,24 +241,25 @@ Example:
 
 ```powershell
 git add custom_components/spanet/manifest.json README.md
-git commit -m "Release 1.2.5"
+git commit -m "Release 1.2.12"
 git push origin main
 ```
 
-The workflow derives the tag from `manifest.json`, for example version `1.2.5` becomes tag `v1.2.5`.
+The workflow derives the tag from `manifest.json`, for example version `1.2.12` becomes tag `v1.2.12`.
 
 ### Manual or tag-based release
 
 You can also run the `Release` workflow manually in GitHub Actions and provide:
 
 - `tag`: the release tag, for example `v1.2.5`
+  - current example: `v1.2.12`
 - `target`: the git ref to release from, default `main`
 
 Or push a matching tag directly:
 
 ```powershell
-git tag v1.2.5
-git push origin v1.2.5
+git tag v1.2.12
+git push origin v1.2.12
 ```
 
 The workflow validates that the tag matches `manifest.json` and only creates the tag or release if it does not already exist.

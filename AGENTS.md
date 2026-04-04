@@ -117,11 +117,15 @@ Do not reintroduce it without a clear requirement and validated behavior.
 - `custom_components/spanet/services.py`
   - advanced control services
 - `custom_components/spanet/switch.py`
-  - pumps, blower, sleep timers, element boost
+  - binary pumps, sleep timers, element boost
+- `custom_components/spanet/select.py`
+  - `Pump A`, blower mode, configuration selects
+- `custom_components/spanet/number.py`
+  - blower variable speed
 - `custom_components/spanet/light.py`
   - native light entity
 - `custom_components/spanet/binary_sensor.py`
-  - heater, sanitise active, sleeping, and pump run-state sensors
+  - cloud connected, heater, sanitise active, sleeping, and pump run-state sensors
 - `custom_components/spanet/sensor.py`
   - temperature sensors
 - `custom_components/spanet/api_mappings.py`

@@ -24,14 +24,9 @@ SK_FILTRATION_RUNTIME = "filtrationRuntime"
 SK_FILTRATION_CYCLE = "filtrationCycle"
 SK_TIMEOUT = "timeout"
 SK_SANITISE_TIME = "sanitiseTime"
-SK_SANITISE_STATUS = "sanitiseStatus"
-SK_DATE_TIME = "dateTime"
 
 SL_HEATING = "Heating"
 SL_SLEEPING = "Sleeping"
-SL_SANITISE = "Sanitise"
-
-SANITISER = ["Off", "On"]
 
 OPT_ENABLE_HEAT_PUMP = "enable_heat_pump"
 
@@ -40,7 +35,7 @@ ACCOUNT_UNIQUE_ID_PREFIX = "spanet-account:"
 RETIRED_ENTITY_UNIQUE_IDS = set()
 
 RETIRED_ENTITY_NAMES_BY_DOMAIN = {
-    "datetime": {"DateTime"},
+    "datetime": {"DateTime", "Date/Time"},
     "sensor": {"Support Mode"},
     "switch": {"Sanitise Status", "Lock Mode", "Blower"},
     "time": {"Sanitise Time"},

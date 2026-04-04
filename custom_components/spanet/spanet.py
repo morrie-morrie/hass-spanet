@@ -217,14 +217,6 @@ class SpaPool:
     async def set_sanitise_time(self, value: str):
         return await self.client.put(f"/Settings/Sanitise/{self.id}", {"time": value})
 
-    async def get_sanitise_status(self):
-        data = await self.client.get(f"/Dashboard/{self.id}")
-        sanitise_on = data.get("sanitiseOn")
-        if sanitise_on is not None:
-            return bool(sanitise_on)
-        statuses = [s.split(" ")[0] for s in data.get("statusList", [])]
-        return "Sanitise" in statuses
-
     async def set_sanitise_status(self, on: bool):
         attempts = [
             (f"/Settings/SanitiseStatus/{self.id}?on={str(bool(on)).lower()}", {}),
@@ -285,26 +277,11 @@ class SpaPool:
             {"totalRuntime": int(total_runtime), "inBetweenCycles": int(in_between_cycles)},
         )
 
-    async def get_lock_mode(self):
-        return await self.client.get(f"/Settings/Lock/{self.id}")
-
-    async def set_lock_mode(self, lock_mode: int):
-        return await self.client.put(f"/Settings/Lock/{self.id}", {"lockMode": int(lock_mode)})
-
     async def get_timeout(self):
         return await self.client.get(f"/Settings/Timeout/{self.id}")
 
     async def set_timeout(self, timeout: int):
         return await self.client.put(f"/Settings/Timeout/{self.id}", {"timeout": int(timeout)})
-
-    async def get_date_time(self):
-        return await self.client.get(f"/Settings/DateTime/{self.id}")
-
-    async def set_date_time(self, value: str):
-        return await self.client.put(f"/Settings/DateTime/{self.id}", {"dateTime": value})
-
-    async def get_support_mode(self):
-        return await self.client.get(f"/Settings/SupportMode/{self.id}")
 
 
 class SpaNet:

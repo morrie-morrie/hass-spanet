@@ -161,21 +161,6 @@ async def test_set_sanitise_status_uses_query_flag():
 
 
 @pytest.mark.asyncio
-async def test_get_sanitise_status_prefers_dashboard_flag():
-    class _Client(FakeClient):
-        async def get(self, path, requires_json=True):
-            self.calls.append(("get", path, None))
-            return {"sanitiseOn": True, "statusList": ["Heating"]}
-
-    client = _Client()
-    pool = SpaPool({"id": "99", "name": "Spa"}, client)
-
-    result = await pool.get_sanitise_status()
-
-    assert result is True
-
-
-@pytest.mark.asyncio
 async def test_set_light_mode_payload():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
@@ -248,18 +233,6 @@ async def test_set_power_save_payload_matches_contract():
 
 
 @pytest.mark.asyncio
-async def test_set_lock_mode_payload_matches_contract():
-    client = FakeClient()
-    pool = SpaPool({"id": "99", "name": "Spa"}, client)
-
-    await pool.set_lock_mode(1)
-
-    _, path, payload = client.calls[-1]
-    assert path == "/Settings/Lock/99"
-    assert payload == {"lockMode": 1}
-
-
-@pytest.mark.asyncio
 async def test_set_pump_payload_matches_contract_mapping():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
@@ -296,6 +269,27 @@ async def test_set_pump_supports_explicit_state_map_override():
 
 
 @pytest.mark.asyncio
+async def test_live_derived_pump_role_mappings_are_pinned():
+    client = FakeClient()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    await pool.set_pump("7", "on", api_mappings.CIRCULATION_PUMP_STATE_TO_API)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/7"
+    assert payload == {"deviceId": 99, "modeId": 4, "pumpVariableSpeed": 0}
+
+    await pool.set_pump("8", "on", api_mappings.PUMP_ONE_STATE_TO_API)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/8"
+    assert payload == {"deviceId": 99, "modeId": 3, "pumpVariableSpeed": 0}
+
+    await pool.set_pump("9", "on", api_mappings.STANDARD_PUMP_STATE_TO_API)
+    _, path, payload = client.calls[-1]
+    assert path == "/PumpsAndBlower/SetPump/9"
+    assert payload == {"deviceId": 99, "modeId": 1, "pumpVariableSpeed": 0}
+
+
+@pytest.mark.asyncio
 async def test_set_blower_payload_matches_contract_mapping():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)
@@ -327,7 +321,6 @@ def test_api_mapping_helpers_cover_known_contract_values():
     assert api_mappings.operation_mode_from_api(1) == "Normal"
     assert api_mappings.power_save_from_api(3) == "High"
     assert api_mappings.heat_pump_from_api(4) == "Off"
-    assert api_mappings.lock_mode_from_api(1) == "on"
     assert api_mappings.extract_time_string({"time": "08:30:00"}) == "08:30"
     assert api_mappings.extract_time_string({"startTime": "2026-04-03T22:00:00"}) == "22:00"
 

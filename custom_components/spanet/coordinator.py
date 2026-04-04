@@ -23,7 +23,6 @@ from .const import (
     SLEEP_TIMER_DAY_PROFILES,
     SK_BLOWER,
     SK_CLOUD_CONNECTED,
-    SK_DATE_TIME,
     SK_ELEMENT_BOOST,
     SK_ELEMENT_BOOST_SUPPORTED,
     SK_FILTRATION_CYCLE,
@@ -362,12 +361,6 @@ class Coordinator(DataUpdateCoordinator):
         self.queue_settings_refresh()
         self._publish_local_state()
 
-    async def set_date_time(self, value: str):
-        await self.spa.set_date_time(value)
-        self.state[SK_DATE_TIME] = value
-        self.queue_settings_refresh()
-        self._publish_local_state()
-
     async def set_element_boost(self, value: str):
         if not self.state.get(SK_ELEMENT_BOOST_SUPPORTED, False):
             logger.warning("Element Boost not supported for spa %s", self.spa_id)
@@ -420,9 +413,6 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_filtration(total_runtime=current_runtime, in_between_cycles=value)
         self.queue_settings_refresh()
         self._publish_local_state()
-
-    async def set_lock_mode_switch(self, value: str):
-        return
 
     async def set_timeout(self, value: int):
         self.state[SK_TIMEOUT] = value
