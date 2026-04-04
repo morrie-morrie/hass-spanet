@@ -37,7 +37,6 @@ from .const import (
     SK_POWER_SAVE,
     SK_PUMPS,
     SK_SANITISE,
-    SK_SANITISE_STATUS,
     SK_SANITISE_TIME,
     SK_SETTEMP,
     SK_SLEEP_TIMERS,
@@ -45,7 +44,6 @@ from .const import (
     SK_TIMEOUT,
     SK_WATERTEMP,
     SL_HEATING,
-    SL_SANITISE,
     SL_SLEEPING,
 )
 from .scheduler import Scheduler
@@ -346,11 +344,8 @@ class Coordinator(DataUpdateCoordinator):
         if str(value).lower() != "on":
             logger.info("Ignoring sanitise '%s' request for spa %s; sanitise is a trigger action", value, self.spa_id)
             return
-        on = value == "on"
         try:
-            await self.spa.set_sanitise_status(on)
-            sanitise_status = await self.spa.get_sanitise_status()
-            self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
+            await self.spa.set_sanitise_status(True)
         except SpaNetApiError as exc:
             logger.warning("Failed to set sanitise status for spa %s: %s", self.spa_id, exc)
             return
@@ -469,7 +464,11 @@ class Coordinator(DataUpdateCoordinator):
 
         self.state[SK_HEATER] = 1 if SL_HEATING in status_list else 0
         self.state[SK_SLEEPING] = 1 if SL_SLEEPING in status_list else 0
-        self.state[SK_SANITISE] = 1 if SL_SANITISE in status_list else 0
+        sanitise_on = dashboard_data.get("sanitiseOn")
+        if sanitise_on is None:
+            self.state[SK_SANITISE] = 1 if "Sanitise" in status_list else 0
+        else:
+            self.state[SK_SANITISE] = 1 if bool(sanitise_on) else 0
 
         if force_refresh:
             for task in self.tasks[1:]:
@@ -579,9 +578,6 @@ class Coordinator(DataUpdateCoordinator):
 
         sanitise_time = await self.spa.get_sanitise_time()
         self.state[SK_SANITISE_TIME] = extract_time_string(sanitise_time)
-
-        sanitise_status = await self.spa.get_sanitise_status()
-        self.state[SK_SANITISE_STATUS] = "on" if bool(sanitise_status) else "off"
 
         try:
             sleep_timers = await self.spa.get_sleep_timer()

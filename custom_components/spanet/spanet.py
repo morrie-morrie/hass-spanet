@@ -219,6 +219,9 @@ class SpaPool:
 
     async def get_sanitise_status(self):
         data = await self.client.get(f"/Dashboard/{self.id}")
+        sanitise_on = data.get("sanitiseOn")
+        if sanitise_on is not None:
+            return bool(sanitise_on)
         statuses = [s.split(" ")[0] for s in data.get("statusList", [])]
         return "Sanitise" in statuses
 

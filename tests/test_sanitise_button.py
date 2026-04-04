@@ -160,14 +160,11 @@ async def test_sanitise_off_request_is_ignored():
         async def set_sanitise_status(self, _on):
             self.calls += 1
 
-        async def get_sanitise_status(self):
-            return False
-
     spa = _Spa()
     coordinator.spa = spa
-    coordinator.state = {const.SK_SANITISE_STATUS: "off"}
+    coordinator.state = {const.SK_SANITISE: 0}
 
     await coordinator.set_sanitiser("off")
 
     assert spa.calls == 0
-    assert coordinator.state[const.SK_SANITISE_STATUS] == "off"
+    assert coordinator.state[const.SK_SANITISE] == 0

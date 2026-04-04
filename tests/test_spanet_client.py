@@ -161,6 +161,21 @@ async def test_set_sanitise_status_uses_query_flag():
 
 
 @pytest.mark.asyncio
+async def test_get_sanitise_status_prefers_dashboard_flag():
+    class _Client(FakeClient):
+        async def get(self, path, requires_json=True):
+            self.calls.append(("get", path, None))
+            return {"sanitiseOn": True, "statusList": ["Heating"]}
+
+    client = _Client()
+    pool = SpaPool({"id": "99", "name": "Spa"}, client)
+
+    result = await pool.get_sanitise_status()
+
+    assert result is True
+
+
+@pytest.mark.asyncio
 async def test_set_light_mode_payload():
     client = FakeClient()
     pool = SpaPool({"id": "99", "name": "Spa"}, client)

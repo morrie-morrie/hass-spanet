@@ -95,9 +95,6 @@ class _Spa:
     async def get_sanitise_time(self):
         return {"time": "08:30:00"}
 
-    async def get_sanitise_status(self):
-        return False
-
     async def get_date_time(self):
         return "2026-04-03T14:05:00"
 
@@ -209,6 +206,53 @@ async def test_update_settings_uses_sleep_timer_endpoint_and_normalizes_times():
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["state"] == "off"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["1"]["dayProfile"] == "Every Day"
     assert coordinator.state[const.SK_SLEEP_TIMERS]["2"]["dayProfile"] == "Weekends"
+
+
+@pytest.mark.asyncio
+async def test_update_dashboard_prefers_sanitise_on_flag_over_status_text():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=SimpleNamespace(),
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+
+    class _SpaWithDashboard:
+        async def get_dashboard(self):
+            return {
+                "setTemperature": 33,
+                "currentTemperature": 32.5,
+                "statusList": ["Heating"],
+                "sanitiseOn": True,
+            }
+
+    coordinator.spa = _SpaWithDashboard()
+    await coordinator.update_dashboard()
+
+    assert coordinator.state[const.SK_SANITISE] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_dashboard_falls_back_to_status_list_when_sanitise_flag_missing():
+    coordinator = coordinator_module.Coordinator(
+        hass=SimpleNamespace(),
+        spanet=SimpleNamespace(),
+        spa_config={"id": "1", "name": "Spa"},
+        config_entry=SimpleNamespace(options={}),
+    )
+
+    class _SpaWithDashboard:
+        async def get_dashboard(self):
+            return {
+                "setTemperature": 33,
+                "currentTemperature": 32.5,
+                "statusList": ["Sanitise Cycle: 19:24"],
+            }
+
+    coordinator.spa = _SpaWithDashboard()
+    await coordinator.update_dashboard()
+
+    assert coordinator.state[const.SK_SANITISE] == 1
 
 
 @pytest.mark.asyncio
