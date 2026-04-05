@@ -160,6 +160,13 @@ class Coordinator(DataUpdateCoordinator):
         if callable(update_listeners):
             update_listeners()
 
+    async def _request_immediate_refresh(self) -> None:
+        """Request a coordinator refresh after a successful write."""
+        try:
+            await self.async_request_refresh()
+        except UpdateFailed as exc:
+            logger.debug("Immediate refresh after write failed for spa %s: %s", self.spa_id, exc)
+
     def _apply_offline_backoff(self) -> None:
         now = int(time.time())
         for index, task in enumerate(self.tasks):
@@ -220,6 +227,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_temperature(temp)
         self.queue_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_pump(self, key: str, state: str):
         pump = self._get_pump(key)
@@ -231,6 +239,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_pump(pump["apiId"], normalized, pump.get("stateMap"))
         self.tasks[1].trigger(0)
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_lights(self, state: str):
         lights = self._get_lights()
@@ -238,6 +247,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_light_status(lights["apiId"], state == "on")
         self.queue_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_light_brightness(self, value: int):
         lights = self._get_lights()
@@ -246,6 +256,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_light_brightness(lights["apiId"], mapped_value)
         self.queue_lights_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_light_speed(self, value: int):
         lights = self._get_lights()
@@ -254,6 +265,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_light_speed(lights["apiId"], mapped_value)
         self.queue_lights_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_light_mode(self, mode: str):
         lights = self._get_lights()
@@ -261,6 +273,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_light_mode(lights["apiId"], mode)
         self.queue_lights_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_light_colour(self, colour: str):
         lights = self._get_lights()
@@ -268,6 +281,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_light_colour(lights["apiId"], colour)
         self.queue_lights_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_operation_mode(self, mode: str):
         from .api_mappings import OPERATION_MODE_API_BY_LABEL
@@ -277,6 +291,7 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_OPERATION_MODE] = mode
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_power_save(self, mode: str):
         from .api_mappings import POWER_SAVE_API_BY_LABEL
@@ -286,6 +301,7 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_POWER_SAVE] = mode
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_sleep_timer(self, key: str, value: str):
         timer = self._get_sleep_timer(key)
@@ -294,6 +310,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_sleep_timer_enabled(timer["apiId"], timer["number"], value == "on")
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_sleep_timer_day_profile(self, key: str, profile: str):
         if profile == "Custom":
@@ -313,6 +330,7 @@ class Coordinator(DataUpdateCoordinator):
         timer["dayProfile"] = self._timer_day_profile_from_hex(str(days_hex))
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_sleep_timer_on_time(self, key: str, value: str):
         timer = self._get_sleep_timer(key)
@@ -325,6 +343,7 @@ class Coordinator(DataUpdateCoordinator):
         timer["startTime"] = str(value)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_sleep_timer_off_time(self, key: str, value: str):
         timer = self._get_sleep_timer(key)
@@ -337,6 +356,7 @@ class Coordinator(DataUpdateCoordinator):
         timer["endTime"] = str(value)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def create_sleep_timer(
         self,
@@ -357,6 +377,7 @@ class Coordinator(DataUpdateCoordinator):
         )
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def update_sleep_timer(
         self,
@@ -379,17 +400,20 @@ class Coordinator(DataUpdateCoordinator):
         )
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def delete_sleep_timer(self, timer_id: int):
         await self.spa.delete_sleep_timer(timer_id)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_heat_pump(self, mode: str):
         await self.spa.set_heat_pump(mode)
         self.state[SK_HEAT_PUMP] = mode
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_sanitiser(self, value: str):
         requested = str(value).lower()
@@ -404,6 +428,7 @@ class Coordinator(DataUpdateCoordinator):
         self.queue_refresh()
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def trigger_sanitise(self):
         await self.set_sanitiser("on")
@@ -416,11 +441,13 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_SANITISE_TIME] = value
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_spa_datetime(self, value: str):
         await self.spa.set_datetime(value)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def sync_spa_datetime(self):
         await self.set_spa_datetime(datetime.now().astimezone().strftime("%d-%m-%Y %H:%M"))
@@ -440,6 +467,7 @@ class Coordinator(DataUpdateCoordinator):
         self.state[SK_ELEMENT_BOOST] = "on" if on else "off"
         self.queue_information_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_blower(self, value: str):
         blower = self._get_blower()
@@ -448,6 +476,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_blower(blower["apiId"], normalized, int(blower.get("speed", 1)))
         self.tasks[1].trigger(0)
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_blower_speed(self, value: int):
         blower = self._get_blower()
@@ -459,6 +488,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_blower(blower["apiId"], state, blower["speed"])
         self.tasks[1].trigger(0)
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_filtration_runtime(self, value: int):
         current_cycle = int(self.state.get(SK_FILTRATION_CYCLE, 0))
@@ -466,6 +496,7 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_filtration(total_runtime=value, in_between_cycles=current_cycle)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_filtration_cycle(self, value: int):
         current_runtime = int(self.state.get(SK_FILTRATION_RUNTIME, 0))
@@ -473,12 +504,14 @@ class Coordinator(DataUpdateCoordinator):
         await self.spa.set_filtration(total_runtime=current_runtime, in_between_cycles=value)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def set_timeout(self, value: int):
         self.state[SK_TIMEOUT] = value
         await self.spa.set_timeout(value)
         self.queue_settings_refresh()
         self._publish_local_state()
+        await self._request_immediate_refresh()
 
     async def _async_update_data(self):
         try:

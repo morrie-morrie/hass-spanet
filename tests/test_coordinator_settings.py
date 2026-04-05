@@ -354,7 +354,13 @@ async def test_settings_writes_queue_immediate_settings_refresh_without_full_ref
     }
 
     notifications = {"count": 0}
+    refresh_requests = {"count": 0}
     coordinator.async_update_listeners = lambda: notifications.__setitem__("count", notifications["count"] + 1)
+
+    async def _request_refresh():
+        refresh_requests["count"] += 1
+
+    coordinator.async_request_refresh = _request_refresh
 
     await coordinator.set_timeout(30)
     assert coordinator.tasks[4].next_tick <= int(time.time())
@@ -388,3 +394,4 @@ async def test_settings_writes_queue_immediate_settings_refresh_without_full_ref
     }
 
     assert notifications["count"] == 4
+    assert refresh_requests["count"] == 4
